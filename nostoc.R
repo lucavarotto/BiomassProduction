@@ -1,3 +1,5 @@
+rm(list=ls());gc();
+
 library(readxl)
 library(dplyr)
 library(ggplot2)
@@ -23,6 +25,25 @@ table(dati$condizione_sperimentale)/7
 
 # Analisi esplorativa ----
 
+## Media globale ----
+
+ggplot(dati, aes(x = tempo, y = OD)) +
+  geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
+  stat_summary(fun = mean, geom = "line", linewidth = 1.2, na.rm = TRUE) +
+  scale_color_viridis_d(option = "plasma", end = 0.9) +
+  labs(
+    title = "Impatto del Consumo Energetico (I x D) sulla Crescita",
+    subtitle = "Le linee spesse indicano la media per ogni livello di intensità luminosa totale",
+    x = "Tempo (giorni)",
+    y = "Resa di Biomassa (OD)",
+    color = "Consumo (I*D)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    panel.grid.minor = element_blank()
+  )
+
 ## Marginale ----
 
 library(ggplot2)
@@ -36,9 +57,7 @@ ggplot(dati, aes(x = tempo, y = OD, color = as.factor(I), group = id_biomassa)) 
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattore I"
-  ) +
-  theme_minimal()
-
+  ) + theme_minimal()
 table(dati$I)/7
 
 ggplot(dati, aes(x = tempo, y = OD, color = as.factor(D), group = id_biomassa)) +
@@ -50,9 +69,7 @@ ggplot(dati, aes(x = tempo, y = OD, color = as.factor(D), group = id_biomassa)) 
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattore D"
-  ) +
-  theme_minimal()
-
+  ) + theme_minimal()
 table(dati$D)/7
 
 ggplot(dati, aes(x = tempo, y = OD, color = as.factor(P), group = id_biomassa)) +
@@ -64,26 +81,12 @@ ggplot(dati, aes(x = tempo, y = OD, color = as.factor(P), group = id_biomassa)) 
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattore P"
-  ) +
-  theme_minimal()
-
+  ) + theme_minimal()
 table(dati$P)/7
 
 ## Congiunta ----
 
 ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale, group = id_biomassa)) +
-  geom_line(alpha = 0.7, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
-  labs(
-    title = "Traiettorie di crescita per combinazione di fattori",
-    subtitle = "Ogni linea rappresenta una delle 53 biomasse",
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattori (I_D_P)"
-  ) +
-  theme_minimal()
-
-ggplot(subset(dati, condizione_sperimentale=="470_18_25.5"), aes(x = tempo, y = OD, color = condizione_sperimentale, group = id_biomassa)) +
   geom_line(alpha = 0.7, na.rm = TRUE) +
   geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
   labs(
@@ -108,14 +111,9 @@ ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale)) +
   ) +
   theme_minimal()
 
+## Condizionate ----
 
-
-
-
-
-dati$condizione_sperimentale2 <- paste(dati$I,
-                                      dati$D,
-                                      sep = "_")
+dati$condizione_sperimentale2 <- paste(dati$I, dati$D, sep = "_")
 
 ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
   geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
@@ -127,95 +125,47 @@ ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattori (I_D_P)"
-  ) +
-  theme_minimal()
+  ) + theme_minimal()
 
-
-p1 <- ggplot(subset(dati, I == 90), aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
+ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
   geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
+  facet_wrap(~I)+
   labs(
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattori (I_D_P)"
   ) +
-  ylim(0,18)+
   theme_minimal()
 
-p2 <- ggplot(subset(dati, I == 280), aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
+ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
   geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
+  facet_wrap(~P)+
   labs(
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattori (I_D_P)"
   ) +
-  ylim(0,18)+
   theme_minimal()
 
-p3 <- ggplot(subset(dati, I == 470), aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
+## Esplorazione outliers ----
+
+ggplot(subset(dati, condizione_sperimentale=="470_18_25.5"), aes(x = tempo, y = OD, color = condizione_sperimentale, group = id_biomassa)) +
+  geom_line(alpha = 0.7, na.rm = TRUE) +
+  geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
   labs(
+    title = "Traiettorie di crescita per combinazione di fattori",
+    subtitle = "Ogni linea rappresenta una delle 53 biomasse",
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattori (I_D_P)"
   ) +
-  ylim(0,18)+
   theme_minimal()
 
-gridExtra::grid.arrange(p1, p2, p3, ncol=3)
-
-
-
-
-
-p1 <- ggplot(subset(dati, P == 1), aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  labs(
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattori (I_D_P)"
-  ) +
-  ylim(0,18)+
-  theme_minimal()
-
-p2 <- ggplot(subset(dati, P == 25.5), aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  labs(
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattori (I_D_P)"
-  ) +
-  ylim(0,18)+
-  theme_minimal()
-
-p3 <- ggplot(subset(dati, P == 50), aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  labs(
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattori (I_D_P)"
-  ) +
-  ylim(0,18)+
-  theme_minimal()
-
-gridExtra::grid.arrange(p1, p2, p3, ncol=3)
-
-
-
-# grafico NA
-
-
+## Esplorazione NA ----
 
 ggplot(subset(dati, id_biomassa %in% dati$id_biomassa[is.na(dati$OD)]), aes(x = tempo, y = OD, color = condizione_sperimentale, group = id_biomassa)) +
   geom_line(alpha = 0.7, na.rm = TRUE) +
@@ -227,7 +177,7 @@ ggplot(subset(dati, id_biomassa %in% dati$id_biomassa[is.na(dati$OD)]), aes(x = 
     y = "Optical Density (OD)",
     color = "Fattori (I_D_P)"
   ) +
-  ylim(0,18)+
+  ylim(0,max(dati$OD, na.rm=T))+
   theme_minimal()
   
 ggplot(dati, aes(x = tempo, y = OD, color = id_biomassa %in% dati$id_biomassa[is.na(dati$OD)], group = id_biomassa)) +
@@ -240,7 +190,7 @@ ggplot(dati, aes(x = tempo, y = OD, color = id_biomassa %in% dati$id_biomassa[is
       y = "Optical Density (OD)",
       color = "Fattori (I_D_P)"
     ) +
-    ylim(0,18)+
+    ylim(0,max(dati$OD, na.rm=T))+
   theme_minimal()
   
 ggplot(subset(dati, I==90 & D==24 & (P == 1 | P==25.5) ), aes(x = tempo, y = OD, color = condizione_sperimentale, group = id_biomassa)) +
@@ -264,32 +214,6 @@ library(viridis)
 dati$consumo <- as.factor(dati$I * dati$D)
 
 ggplot(dati, aes(x = tempo, y = OD, color = consumo)) +
-  # 1. Linee sottili per le singole biomasse (background)
-  geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
-  
-  # 2. Linee spesse per la media di ogni livello di consumo
-  stat_summary(fun = mean, geom = "line", linewidth = 1.2, na.rm = TRUE) +
-  
-  # 3. Palette Scientifica (Viridis)
-  scale_color_viridis_d(option = "plasma", end = 0.9) +
-  
-  labs(
-    title = "Impatto del Consumo Energetico (I x D) sulla Crescita",
-    subtitle = "Le linee spesse indicano la media per ogni livello di intensità luminosa totale",
-    x = "Tempo (giorni)",
-    y = "Resa di Biomassa (OD)",
-    color = "Consumo (I*D)"
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "right",
-    panel.grid.minor = element_blank()
-  )
-
-
-
-
-ggplot(dati, aes(x = tempo, y = OD)) +
   geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.2, na.rm = TRUE) +
   scale_color_viridis_d(option = "plasma", end = 0.9) +
@@ -306,14 +230,7 @@ ggplot(dati, aes(x = tempo, y = OD)) +
     panel.grid.minor = element_blank()
   )
 
-
-
-
-
-
-
-
-# dati incrementali: differenze ----
+# Dati incrementali: differenze ----
 
 library(dplyr)
 
@@ -351,7 +268,7 @@ ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = consumo)) +
   theme_minimal()
 
 
-# dati incrementali: rapporti ----
+# Dati incrementali: rapporti ----
 
 dati_incrementi_rapporti <- dati %>%
   group_by(id_biomassa) %>%
