@@ -3,4 +3,3 @@ GAM
 Dati funzionali
 Modello per gli incrementi
 Modelli Sigmoidali con Parametrizzazione Biologica
-e

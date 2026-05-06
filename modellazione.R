@@ -1,0 +1,14 @@
+rm(list=ls());gc();
+
+load("dati_modificati.Rdata")
+
+colnames(dati)
+library(lme4)
+m0 <- lm(OD~ tempo + (P + I + D)^2, data=dati)
+m0
+AIC(m0)
+
+table(dati$condizione_sperimentale)
+m1 <- lmer(OD ~ tempo + (tempo|condizione_sperimentale), data=dati)
+m1
+AIC(m1)

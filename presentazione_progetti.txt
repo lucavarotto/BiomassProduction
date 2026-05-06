@@ -10,6 +10,8 @@ Contesto scientifico: la produzione di biomassa cresce fino a un livello massimo
 
 Vogliamo capire come le condizioni sperimentali influenzano la produzione di biomassa. L'obbiettivo è ottimizzare il rapporto tra biomassa prodotta e energia consumata, non basta ottimizzare la biomassa prodotta.
 
+Finos suggerisce di modellare tutta la superficie e di guardare anche ai valori non osservati.
+
 
 ---- Proprietà chimi-fisiche del suolo: Bortoletto, Faedo, Paganelli, Zannini -----
 
