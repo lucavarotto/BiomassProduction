@@ -1,0 +1,28 @@
+---- BIOMASSE: Caicchiolo, Pati, Nascimben, Varotto ----
+
+Dataset sperimentale, l'obbiettivo è creare tanta biomassa consumando poco energia, visto che la biomassa poi servirà per creare energia.
+
+Le variabili I e D sono particolarmente legate al consumo energetico, vanno usate come proxy.
+
+Abbiamo le osservazioni nel tempo: si osserva ogni variabile una volta alla settimana per 8 settimane. La variabile risposta è la resa di biomassa.
+
+Contesto scientifico: la produzione di biomassa cresce fino a un livello massimo di produzione, poi potrebbe deperire in modo naturale.
+
+Vogliamo capire come le condizioni sperimentali influenzano la produzione di biomassa. L'obbiettivo è ottimizzare il rapporto tra biomassa prodotta e energia consumata, non basta ottimizzare la biomassa prodotta.
+
+
+---- Proprietà chimi-fisiche del suolo: Bortoletto, Faedo, Paganelli, Zannini -----
+
+Dataset prospettico/osservazionale riguarda a zona agricola tropicale con diverse modalità di gestione.
+
+Ci sono fattorie a gestione familiare e fattorie a gestione "industriale"/di multinazionali. Vogliamo capire se e in che misura le proprietà del suolo cambino a seconda del tipo di gestione.
+
+Assenza di coltivazioni=foresta, se coltivo posso irrigare (o la pioggia fare il lavoro) e posso fertilizzare.
+
+Per ogni fattoria vengono effettuate rilevazioni in più punti e a diverse profondità per lo stesso punto. Queste rilevazioni sono dipendenti. Vogliamo fare uno studio ecologico, quindi ci interessa molto anche cosa succede in profondità.
+
+Plot indicano i campionamenti nella stessa fattoria. Sono sufficientemente lontani per essere ritenuti indipendenti. Abbiamo anche latitudine e longitudine per valutare l'eventuale dipendenza spaziale.
+
+Le y sono PercTotNitro, PercSOC e PerTotPhos. Un suolo di qualità ha alti valori di PercTotNitro, PercSOC e PerTotPhos. Vogliamo valutare se e come varino queste 3 variabili a seconda del tipo di gestione.
+
+Class è legata a argilla, limo e sabbia.

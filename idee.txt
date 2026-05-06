@@ -1,0 +1,5 @@
+MLN: semplice, con effetti casuali
+GAM
+Dati funzionali
+Modello per gli incrementi
+Modelli Sigmoidali con Parametrizzazione Biologica
