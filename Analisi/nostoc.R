@@ -131,23 +131,43 @@ ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
   geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  facet_wrap(~I)+
+  facet_wrap(~P)+
+  scale_color_viridis_d(option = "magma", end = 0.9)+
   labs(
+    title = "Dinamica di crescita condizionata a P",
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
-    color = "Fattori (I_D_P)"
+    color = "Fattori (I_D)"
   ) +
   theme_minimal()
 
-ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
+dati$condizione_sperimentale3 <- paste(dati$I, dati$P, sep = "_")
+ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale3)) +
   geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  facet_wrap(~P)+
+  facet_wrap(~D)+
+  scale_color_viridis_d(option = "magma", end = 0.9)+
   labs(
+    title = "Dinamica di crescita condizionata a D",
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
-    color = "Fattori (I_D_P)"
+    color = "Fattori (I_P)"
+  ) +
+  theme_minimal()
+
+dati$condizione_sperimentale4 <- paste(dati$D, dati$P, sep = "_")
+ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale4)) +
+  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
+  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
+  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
+  facet_wrap(~I)+
+  scale_color_viridis_d(option = "magma", end = 0.9)+
+  labs(
+    title = "Dinamica di crescita condizionata a I",
+    x = "Tempo (giorni)",
+    y = "Optical Density (OD)",
+    color = "Fattori (D_P)"
   ) +
   theme_minimal()
 
@@ -230,11 +250,50 @@ ggplot(dati, aes(x = tempo, y = OD, color = consumo)) +
     panel.grid.minor = element_blank()
   )
 
-# Dati incrementali: differenze ----
+
+## incrementi rispetto a N0 ----
+
+dati$N0 <- rep(dati[dati$tempo==0,]$OD, each=7)
+
+library(ggplot2)
+ggplot(dati, aes(x = tempo, y = OD, colour=N0)) +
+  geom_line(aes(group = id_biomassa), na.rm = TRUE, linewidth=1.5) +
+  facet_wrap(~I)+
+  scale_color_viridis_c(option = "plasma", end = 0.9) +
+  labs(
+    title = "Impatto del primo valore sulla Crescita",
+    subtitle = "Le linee spesse indicano la media per ogni livello di intensità luminosa totale",
+    x = "Tempo (giorni)",
+    y = "Resa di Biomassa (OD)",
+    color = "N0"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    panel.grid.minor = element_blank()
+  )
+
+
+# Aggiunta del tempo 0 ----
+
+library(dplyr)
+dati_aggiornati <- dati %>%
+  mutate(tempo = tempo + 1)
+osservazioni_t0 <- dati_aggiornati %>%
+  distinct(id_biomassa, .keep_all = TRUE) %>%
+  mutate(
+    tempo = 0,
+    OD = 0.01
+  )
+dati_completi <- bind_rows(dati_aggiornati, osservazioni_t0) %>%
+  arrange(id_biomassa, tempo)
+head(dati_completi, 8)
+
+## Dati incrementali: differenze ----
 
 library(dplyr)
 
-dati_incrementi <- dati %>%
+dati_incrementi <- dati_completi %>%
   group_by(id_biomassa) %>%
   arrange(tempo) %>%
   mutate(
@@ -244,20 +303,10 @@ dati_incrementi <- dati %>%
   filter(!is.na(incremento_OD)) |> # Rimuoviamo il tempo 0 (che non ha incremento)
   ungroup()
 
-# Visualizzazione della struttura del nuovo dataset (6 righe per biomassa)
-# str(dati_incrementi)
-
-# 2. Grafico degli incrementi con palette Plasma
 ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = consumo)) +
-  # Linee sottili per le singole biomasse
   geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
-  
-  # Linea spessa della media per livello di consumo
   stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
-  
-  # Palette Plasma (da viridis)
   scale_color_viridis_d(option = "plasma") +
-  
   labs(
     title = "Velocità di crescita: Incrementi giornalieri di OD",
     subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
@@ -268,7 +317,7 @@ ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = consumo)) +
   theme_minimal()
 
 
-# Dati incrementali: rapporti ----
+## Dati incrementali: rapporti ----
 
 dati_incrementi_rapporti <- dati %>%
   group_by(id_biomassa) %>%
@@ -280,20 +329,10 @@ dati_incrementi_rapporti <- dati %>%
   filter(!is.na(incremento_OD)) |> # Rimuoviamo il tempo 0 (che non ha incremento)
   ungroup()
 
-# Visualizzazione della struttura del nuovo dataset (6 righe per biomassa)
-# str(dati_incrementi)
-
-# 2. Grafico degli incrementi con palette Plasma
 ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = consumo)) +
-  # Linee sottili per le singole biomasse
   geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
-  
-  # Linea spessa della media per livello di consumo
   stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
-  
-  # Palette Plasma (da viridis)
   scale_color_viridis_d(option = "plasma") +
-  
   labs(
     title = "Velocità di crescita: Incrementi giornalieri di OD",
     subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
@@ -303,5 +342,8 @@ ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = consu
   ) +
   theme_minimal()
 
+
+## salvataggio ----
+
 save(dati, dati_incrementi, dati_incrementi_rapporti,
-     file = "dati_modificati.Rdata")
+     file = "Analisi/dati_modificati.Rdata")
