@@ -13,8 +13,107 @@ g <- MicrobialGrowth(x, y,
 g
 
 
-# regressione gompertz ----
+# regressione gompertz con effetti casuali ----
 
-library(nls)
+dati_m_gompertz <- na.omit(dati)
+dim(dati_m_gompertz)
 
-colnames(dati)
+library(nlme)
+
+# Modello con interazioni complete sui parametri Asym e b3
+modello_gompertz <- nlme(
+  model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  fixed = list(
+    # Interazione tripla per l'asintoto (biomassa massima)
+    Asym ~ I * D * P,
+    # b2: parametro di traslazione temporale correlato alla fase di latenza (lag phase) [cite: 18]
+    b2 ~ 1,             
+    # Interazione tripla per il tasso di crescita (rapidità)
+    b3 ~ I * D * P      
+  ),
+  random = Asym ~ 1 | id_biomassa,
+  # Nota: i valori di start devono ora includere gli zeri per i nuovi termini di interazione
+  # In un modello I*D*P ci sono 8 coefficienti (intercetta + 3 principali + 3 doppie + 1 tripla)
+  start = c(
+    Asym = c(5, rep(0, 7)), 
+    b2 = 2,               
+    b3 = c(0.8, rep(0, 7)) 
+  ),
+)
+
+library(nlme)
+
+summary(modello_gompertz)
+
+dati_m_gompertz$predicted <- predict(modello_gompertz)
+
+# Selezioniamo alcuni gruppi (id_biomassa) rappresentativi per non affollare il grafico
+set.seed(123) # Per riproducibilità
+ids_da_mostrare <- 1:53
+
+dati_plot <- dati_m_gompertz %>%
+  filter(id_biomassa %in% ids_da_mostrare)
+
+library(ggforce)
+ggplot(dati_plot, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
+  geom_point(aes(y = OD), alpha = 0.6) +
+  geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
+  geom_line(aes(y = predicted, group = id_biomassa), linewidth = 1.2)+
+  # SOSTITUIAMO facet_wrap con facet_wrap_paginate
+  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 4, nrow = 3, page = 1) +
+  scale_color_viridis_d(option = "plasma", guide = "none") +
+  labs(
+    title = "Confronto Dati Reali vs Stima Gompertz",
+    subtitle = "I punti indicano le osservazioni reali; le linee continue rappresentano il modello NLME",
+    x = "Tempo (giorni)",
+    y = "Optical Density (OD)"
+  ) +
+  theme_minimal()
+
+# regressione gompertz solo fisso ----
+
+modello_gompertz_fisso <- gnls(
+  model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  params = list(
+    Asym ~ I * D * P,  # Interazione per l'asintoto
+    b2 ~ I * D * P,    # Interazione per la latenza (richiesta)
+    b3 ~ I * D * P     # Interazione per la rapidità
+  ),
+  # Dobbiamo aggiornare gli start: ora abbiamo 8 parametri per OGNI componente
+  # (Intercetta, I, D, P, I:D, I:P, D:P, I:D:P) x 3 parametri della Gompertz = 24 coefficienti
+  start = c(
+    Asym = c(5, rep(0, 7)), 
+    b2 = c(2, rep(0, 7)),    
+    b3 = c(0.8, rep(0, 7))
+  ),
+  na.action = na.omit
+)
+
+summary(modello_gompertz_fisso)
+
+dati_m_gompertz$predicted_fisso <- predict(modello_gompertz)
+
+# Selezioniamo alcuni gruppi (id_biomassa) rappresentativi per non affollare il grafico
+set.seed(123) # Per riproducibilità
+ids_da_mostrare <- 1:53
+
+dati_plot <- dati_m_gompertz %>%
+  filter(id_biomassa %in% ids_da_mostrare)
+
+library(ggforce)
+ggplot(dati_plot, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
+  geom_point(aes(y = OD), alpha = 0.6) +
+  geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
+  geom_line(aes(y = predicted_fisso, group = id_biomassa), linewidth = 1.2)+
+  # SOSTITUIAMO facet_wrap con facet_wrap_paginate
+  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 4, nrow = 3, page = 1) +
+  scale_color_viridis_d(option = "plasma", guide = "none") +
+  labs(
+    title = "Confronto Dati Reali vs Stima Gompertz",
+    subtitle = "I punti indicano le osservazioni reali; le linee continue rappresentano il modello NLME",
+    x = "Tempo (giorni)",
+    y = "Optical Density (OD)"
+  ) +
+  theme_minimal()
