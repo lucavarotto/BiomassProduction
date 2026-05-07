@@ -5,7 +5,7 @@ library(dplyr)
 library(ggplot2)
 
 # Caricamento e pulizia
-dati <- readxl::read_xlsx("nostoc.xlsx", skip = 2)
+dati <- readxl::read_xlsx("Analisi/nostoc.xlsx", skip = 2)
 # Rinominiamo le colonne (basandoci sulla struttura del file)
 colnames(dati) <- c("row_id", "I", "D", "P", "tempo", "OD")
 
