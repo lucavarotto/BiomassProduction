@@ -12,6 +12,7 @@ Vogliamo capire come le condizioni sperimentali influenzano la produzione di bio
 
 Finos suggerisce di modellare tutta la superficie e di guardare anche ai valori non osservati.
 
+OD = optical density = densità ottica della coltura, si tratta di una grandezza adimensionale comunemente usata come proxy della concentrazione di biomassa
 
 ---- Proprietà chimi-fisiche del suolo: Bortoletto, Faedo, Paganelli, Zannini -----
 
