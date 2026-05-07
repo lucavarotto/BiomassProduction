@@ -19,3 +19,6 @@ AIC(m1)
 # modelli biologici ----
 
 install.packages("MicrobialGrowth")
+
+g <- MicrobialGrowth(example_data$time, example_data$y1, model = "gompertz")
+g
