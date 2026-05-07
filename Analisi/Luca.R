@@ -60,24 +60,18 @@ modello_gompertz <- nlme(
   model = OD ~ SSgompertz(tempo, Asym, b2, b3),
   data = dati_m_gompertz,
   fixed = list(
-    # Interazione tripla per l'asintoto (biomassa massima)
-    Asym ~ I * D * P,
-    # b2: parametro di traslazione temporale correlato alla fase di latenza (lag phase) [cite: 18]
-    b2 ~ 1,             
-    # Interazione tripla per il tasso di crescita (rapidità)
-    b3 ~ I * D * P      
+    Asym ~ (I+D)^2+P,
+    b2 ~ (I+D)^2+P,           
+    b3 ~ (I+D)^2+P     
   ),
   random = Asym ~ 1 | id_biomassa,
   # Nota: i valori di start devono ora includere gli zeri per i nuovi termini di interazione
   # In un modello I*D*P ci sono 8 coefficienti (intercetta + 3 principali + 3 doppie + 1 tripla)
   start = c(
-    Asym = c(5, rep(0, 7)), 
-    b2 = 2,               
-    b3 = c(0.8, rep(0, 7)) 
-  ),
+    Asym = c(5, rep(0, 4)), 
+    b2 = c(2, rep(0, 4)),     
+    b3 = c(0.8, rep(0, 4)) )
 )
-
-library(nlme)
 
 summary(modello_gompertz)
 
@@ -96,7 +90,7 @@ ggplot(dati_plot, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
   geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
   geom_line(aes(y = predicted, group = id_biomassa), linewidth = 1.2)+
   # SOSTITUIAMO facet_wrap con facet_wrap_paginate
-  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 4, nrow = 3, page = 1) +
+  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 4, nrow = 3, page = 4) +
   scale_color_viridis_d(option = "plasma", guide = "none") +
   labs(
     title = "Confronto Dati Reali vs Stima Gompertz",
