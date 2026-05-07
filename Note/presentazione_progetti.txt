@@ -14,6 +14,8 @@ Finos suggerisce di modellare tutta la superficie e di guardare anche ai valori 
 
 OD = optical density = densità ottica della coltura, si tratta di una grandezza adimensionale comunemente usata come proxy della concentrazione di biomassa
 
+Menardi suggerisce di non fermarsi alla letteratura specifica in ambito biologico, ma di cercare modelli di durata anche provenienti da altri ambiti
+
 ---- Proprietà chimi-fisiche del suolo: Bortoletto, Faedo, Paganelli, Zannini -----
 
 Dataset prospettico/osservazionale riguarda a zona agricola tropicale con diverse modalità di gestione.
