@@ -132,7 +132,9 @@ ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
   facet_wrap(~P)+
+  scale_color_viridis_d(option = "magma", end = 0.9)+
   labs(
+    title = "Dinamica di crescita condizionata a P",
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattori (I_D)"
@@ -145,7 +147,9 @@ ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale3)) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
   facet_wrap(~D)+
+  scale_color_viridis_d(option = "magma", end = 0.9)+
   labs(
+    title = "Dinamica di crescita condizionata a D",
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattori (I_P)"
@@ -158,7 +162,9 @@ ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale4)) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
   facet_wrap(~I)+
+  scale_color_viridis_d(option = "magma", end = 0.9)+
   labs(
+    title = "Dinamica di crescita condizionata a I",
     x = "Tempo (giorni)",
     y = "Optical Density (OD)",
     color = "Fattori (D_P)"
