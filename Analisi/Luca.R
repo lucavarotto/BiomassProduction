@@ -8,6 +8,13 @@ load("Analisi/dati_modificati.Rdata")
 
 colnames(dati)
 library(MicrobialGrowth)
-g <- MicrobialGrowth(example_data$time, example_data$y1,
+g <- MicrobialGrowth(x, y,
                      model = "gompertz")
 g
+
+
+# regressione gompertz ----
+
+library(nls)
+
+colnames(dati)

@@ -3,3 +3,4 @@ GAM
 Dati funzionali
 Modello per gli incrementi
 Modelli Sigmoidali con Parametrizzazione Biologica
+Bayesiani con Deviance information criterion
