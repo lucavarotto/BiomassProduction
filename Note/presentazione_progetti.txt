@@ -20,6 +20,8 @@ Ogni biomassa inizia dalla stessa massa: 3,5 x 75 cm^2.
 
 L'illuminazione ha l'effetto di accorciare la curva.
 
+Menardi suggerisce di non fermarsi alla letteratura specifica in ambito biologico, ma di cercare modelli di durata anche provenienti da altri ambiti.
+
 ---- Proprietà chimi-fisiche del suolo: Bortoletto, Faedo, Paganelli, Zannini -----
 
 Dataset prospettico/osservazionale riguarda a zona agricola tropicale con diverse modalità di gestione.
