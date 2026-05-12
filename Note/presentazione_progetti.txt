@@ -14,6 +14,12 @@ Finos suggerisce di modellare tutta la superficie e di guardare anche ai valori 
 
 OD = optical density = densità ottica della coltura, si tratta di una grandezza adimensionale comunemente usata come proxy della concentrazione di biomassa
 
+Light intenisity è $(\mu mol) / (m^2 \cdot s)$ quante micro-moli di fotoni passano in un metro in un secondo.
+La durata luminosa è in giorni.
+Ogni biomassa inizia dalla stessa massa: 3,5 x 75 cm^2.
+
+L'illuminazione ha l'effetto di accorciare la curva.
+
 ---- Proprietà chimi-fisiche del suolo: Bortoletto, Faedo, Paganelli, Zannini -----
 
 Dataset prospettico/osservazionale riguarda a zona agricola tropicale con diverse modalità di gestione.

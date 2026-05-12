@@ -85,11 +85,12 @@ dati_plot <- dati_m_gompertz %>%
   filter(id_biomassa %in% ids_da_mostrare)
 
 library(ggforce)
+x11()
 ggplot(dati_plot, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
   geom_point(aes(y = OD), alpha = 0.6) +
   geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
   geom_line(aes(y = predicted, group = id_biomassa), linewidth = 1.2)+
-  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 4, nrow = 3, page = 4) +
+  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 3, nrow = 3, page = 6) +
   scale_color_viridis_d(option = "plasma", guide = "none") +
   labs(
     title = "Confronto Dati Reali vs Stima Gompertz",
@@ -138,7 +139,7 @@ ggplot(dati_plot, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
   geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
   geom_line(aes(y = predicted_fisso, group = id_biomassa), linewidth = 1.2)+
   # SOSTITUIAMO facet_wrap con facet_wrap_paginate
-  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 4, nrow = 3, page = 1) +
+  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 4, nrow = 3, page = 2) +
   scale_color_viridis_d(option = "plasma", guide = "none") +
   labs(
     title = "Confronto Dati Reali vs Stima Gompertz",
