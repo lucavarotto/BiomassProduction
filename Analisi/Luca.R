@@ -73,6 +73,10 @@ modello_gompertz <- nlme(
     b3 = c(0.8, rep(0, 4)) )
 )
 
+AIC(modello_gompertz)
+
+?MuMIn::dredge()
+
 summary(modello_gompertz)
 
 dati_m_gompertz$predicted <- predict(modello_gompertz)
