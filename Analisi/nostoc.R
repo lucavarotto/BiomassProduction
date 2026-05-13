@@ -119,20 +119,25 @@ dati$condizione_sperimentale4 <- paste(dati$D, dati$P, sep = "_")
 
 grafico_condizionate <- function(condizionante, f1, f2 = NULL) {
   
-  # Creiamo l'etichetta per il colore dinamicamente
-  # Se f2 è presente, uniamo le colonne, altrimenti usiamo solo f1
+  # Se f2 è fornito, crea una nuova colonna 'gruppo_colore' unendo i valori di f1 e f2
   if (!is.null(f2)) {
     dati$gruppo_colore <- paste(dati[[f1]], dati[[f2]], sep = "_")
-    label_colore <- paste(f1, f2, sep = "_")
+    label_colore <- paste(f1, f2, sep = "_") # Etichetta per la legenda
   } else {
+    # Se f2 manca, usa solo f1 trasformandolo in fattore per la scala cromatica
     dati$gruppo_colore <- as.factor(dati[[f1]])
-    label_colore <- f1
+    label_colore <- f1 # Etichetta per la legenda
   }
   
   ggplot(dati, aes(x = tempo, y = OD, color = gruppo_colore)) +
+    # Rappresenta le singole repliche come linee sottili e semitrasparenti (alpha = 0.2)
+    # 'group = id_biomassa' assicura che ogni serie temporale sia una linea distinta
     geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
+    # Calcola e disegna la linea della media per ogni gruppo (spessa 1.5)
     stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
+    # Aggiunge i punti che rappresentano la media per ogni rilevazione temporale
     stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
+    # Divide il grafico in sotto-pannelli in base alla variabile 'condizionante'
     facet_wrap(vars(dati[[condizionante]])) +
     scale_color_viridis_d(option = "magma", end = 0.9) +
     labs(
@@ -141,8 +146,8 @@ grafico_condizionate <- function(condizionante, f1, f2 = NULL) {
     ) + theme_minimal()
 }
 
-grafico_condizionate("D", "I", "P")
-
+# Chiamata della funzione usando "I" come variabile per i pannelli e "P" per i colori
+grafico_condizionate("I", "D")
 
 ## Esplorazione outliers ----
 
