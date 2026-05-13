@@ -58,7 +58,6 @@ dati_m_gompertz <- dati_m_gompertz |> mutate(
 
 library(nlme)
 
-# Modello con interazioni complete sui parametri Asym e b3
 modello_gompertz <- nlme(
   model = OD ~ SSgompertz(tempo, Asym, b2, b3),
   data = dati_m_gompertz,
@@ -69,12 +68,27 @@ modello_gompertz <- nlme(
   ),
   random = Asym ~ 1 | id_biomassa,
   start = c(
-    Asym = c(5, rep(0, 4)), 
-    b2 = c(2, rep(0, 4)),     
-    b3 = c(0.8, rep(0, 4)) )
+    Asym = c(14, rep(0, 4)), 
+    b2 = c(5.5, rep(0, 4)),     
+    b3 = c(0.75, rep(0, 4))),
+  control = nlmeControl(msMaxIter = 150, # si riferisce all'ottimizzatore numerico
+                        maxIter = 250, # Il numero massimo di iterazioni durante la
+                        # fase di ottimizzazione della stima di massima verosimiglianza
+                        pnlsMaxIter = 20 # il modello tiene fissi
+                        # gli effetti casuali e cerca di aggiornare
+                        # i parametri fissi per minimizzare l'errore.
+                        )
 )
-
-AIC(modello_gompertz)
+modello_gompertz2 <- update(modello_gompertz,
+                            random = b2 ~ 1 | id_biomassa)
+modello_gompertz3 <- update(modello_gompertz,
+                            random = b3 ~ 1 | id_biomassa)
+modello_gompertz4 <- update(modello_gompertz,
+                            random = Asym + b3 ~ 1 | id_biomassa)
+modello_gompertz5 <- update(modello_gompertz,
+                            random = Asym + b2 ~ 1 | id_biomassa)
+AIC(modello_gompertz, modello_gompertz2, modello_gompertz3,
+    modello_gompertz4)
 
 ?MuMIn::dredge()
 
@@ -135,8 +149,7 @@ ggplot(dati_m_gompertz, aes(x = tempo, color = as.factor(condizione_sperimentale
     subtitle = "I punti indicano le osservazioni reali; le linee continue rappresentano il modello NLME",
     x = "Tempo (giorni)",
     y = "Optical Density (OD)"
-  ) +
-  theme_minimal()
+  ) + theme_minimal()
 
 matrix(coef(modello_gompertz_fisso), nrow=3, byrow=T) %*%
   t(as.matrix(model.matrix(~(I + D)^2+P, data=dati[1,])))

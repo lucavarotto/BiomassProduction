@@ -118,7 +118,6 @@ dati$condizione_sperimentale3 <- paste(dati$I, dati$P, sep = "_")
 dati$condizione_sperimentale4 <- paste(dati$D, dati$P, sep = "_")
 
 grafico_condizionate <- function(condizionante, f1, f2 = NULL) {
-  
   # Se f2 è fornito, crea una nuova colonna 'gruppo_colore' unendo i valori di f1 e f2
   if (!is.null(f2)) {
     dati$gruppo_colore <- paste(dati[[f1]], dati[[f2]], sep = "_")
@@ -284,6 +283,7 @@ dati_incrementi <- dati_completi %>%
 ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = consumo)) +
   geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", size = 1) +
   scale_color_viridis_d(option = "plasma") +
   labs(
     title = "Velocità di crescita: Incrementi giornalieri di OD",
@@ -310,6 +310,7 @@ dati_incrementi_rapporti <- dati %>%
 ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = consumo)) +
   geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 1) +
   scale_color_viridis_d(option = "plasma") +
   labs(
     title = "Velocità di crescita: Incrementi giornalieri di OD",
