@@ -71,10 +71,10 @@ modello_gompertz <- nlme(
     Asym = c(14, rep(0, 4)), 
     b2 = c(5.5, rep(0, 4)),     
     b3 = c(0.75, rep(0, 4))),
-  control = nlmeControl(msMaxIter = 150, # si riferisce all'ottimizzatore numerico
-                        maxIter = 250, # Il numero massimo di iterazioni durante la
+  control = nlmeControl(msMaxIter = 200, # si riferisce all'ottimizzatore numerico
+                        maxIter = 350, # Il numero massimo di iterazioni durante la
                         # fase di ottimizzazione della stima di massima verosimiglianza
-                        pnlsMaxIter = 20 # il modello tiene fissi
+                        pnlsMaxIter = 25 # il modello tiene fissi
                         # gli effetti casuali e cerca di aggiornare
                         # i parametri fissi per minimizzare l'errore.
                         )
@@ -86,7 +86,7 @@ modello_gompertz3 <- update(modello_gompertz,
 modello_gompertz4 <- update(modello_gompertz,
                             random = Asym + b3 ~ 1 | id_biomassa)
 modello_gompertz5 <- update(modello_gompertz,
-                            random = Asym + b2 ~ 1 | id_biomassa)
+                            random = list(id_biomassa = pdDiag(Asym + b2 ~ 1)))
 AIC(modello_gompertz, modello_gompertz2, modello_gompertz3,
     modello_gompertz4)
 
