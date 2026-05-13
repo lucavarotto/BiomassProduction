@@ -114,62 +114,35 @@ ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale)) +
 ## Condizionate ----
 
 dati$condizione_sperimentale2 <- paste(dati$I, dati$D, sep = "_")
-
-ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  labs(
-    title = "Traiettorie medie per condizione sperimentale",
-    subtitle = "Le linee spesse rappresentano la media di gruppo; le linee chiare le singole biomasse",
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattori (I_D_P)"
-  ) + theme_minimal()
-
-ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale2)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  facet_wrap(~P)+
-  scale_color_viridis_d(option = "magma", end = 0.9)+
-  labs(
-    title = "Dinamica di crescita condizionata a P",
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattori (I_D)"
-  ) +
-  theme_minimal()
-
 dati$condizione_sperimentale3 <- paste(dati$I, dati$P, sep = "_")
-ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale3)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  facet_wrap(~D)+
-  scale_color_viridis_d(option = "magma", end = 0.9)+
-  labs(
-    title = "Dinamica di crescita condizionata a D",
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattori (I_P)"
-  ) +
-  theme_minimal()
-
 dati$condizione_sperimentale4 <- paste(dati$D, dati$P, sep = "_")
-ggplot(dati, aes(x = tempo, y = OD, color = condizione_sperimentale4)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
-  facet_wrap(~I)+
-  scale_color_viridis_d(option = "magma", end = 0.9)+
-  labs(
-    title = "Dinamica di crescita condizionata a I",
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattori (D_P)"
-  ) +
-  theme_minimal()
+
+grafico_condizionate <- function(condizionante, f1, f2 = NULL) {
+  
+  # Creiamo l'etichetta per il colore dinamicamente
+  # Se f2 è presente, uniamo le colonne, altrimenti usiamo solo f1
+  if (!is.null(f2)) {
+    dati$gruppo_colore <- paste(dati[[f1]], dati[[f2]], sep = "_")
+    label_colore <- paste(f1, f2, sep = "_")
+  } else {
+    dati$gruppo_colore <- as.factor(dati[[f1]])
+    label_colore <- f1
+  }
+  
+  ggplot(dati, aes(x = tempo, y = OD, color = gruppo_colore)) +
+    geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
+    stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
+    stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
+    facet_wrap(vars(dati[[condizionante]])) +
+    scale_color_viridis_d(option = "magma", end = 0.9) +
+    labs(
+      title = paste("Dinamica di crescita condizionata a", condizionante),
+      x = "Tempo (giorni)", y = "Optical Density (OD)", color = label_colore
+    ) + theme_minimal()
+}
+
+grafico_condizionate("D", "I", "P")
+
 
 ## Esplorazione outliers ----
 
