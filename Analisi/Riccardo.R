@@ -1,3 +1,51 @@
+# Grafico incrementi ------------------------------------------------------
+
+# Differenze per consumo
+ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = consumo)) +
+  geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
+  stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", size = 1) +
+  scale_color_viridis_d(option = "plasma") +
+  labs(
+    title = "Velocità di crescita: Incrementi giornalieri di OD",
+    subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
+    x = "Giorno (t)",
+    y = "Delta OD (OD[t] - OD[t-1])",
+    color = "Consumo (I*D)"
+  ) +
+  theme_minimal()
+
+# Differenze per combinazione di condizioni sperimentali
+ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = condizione_sperimentale)) +
+  geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
+  stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", size = 1) +
+  scale_color_viridis_d(option = "plasma") +
+  labs(
+    title = "Velocità di crescita: Incrementi giornalieri di OD",
+    subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
+    x = "Settimana (t)",
+    y = "Delta OD (OD[t] - OD[t-1])",
+    color = "Condizioni Sperimentali"
+  ) +
+  theme_minimal()
+
+# Rapporti per comb. condiz. sperimentali
+ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = condizione_sperimentale)) +
+  geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
+  stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 1) +
+  scale_color_viridis_d(option = "plasma") +
+  labs(
+    title = "Velocità di crescita: Incrementi giornalieri di OD",
+    subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
+    x = "Settimana (t)",
+    y = "Delta OD (OD[t] - OD[t-1])",
+    color = "Condizioni Sperimentali"
+  ) +
+  theme_minimal()
+
+
 # Caricamento librerie necessarie
 library(plotly)
 library(dplyr)
@@ -79,3 +127,112 @@ plot_ly() %>%
     scene2 = list(domain = list(column = 1), xaxis = list(title = "I"), yaxis = list(title = "D"), zaxis = list(title = "OD"), title = "P=25.5"),
     scene3 = list(domain = list(column = 2), xaxis = list(title = "I"), yaxis = list(title = "D"), zaxis = list(title = "OD"), title = "P=50")
   )
+
+
+# GAM :incrementi ---------------------------------------------------------
+
+library(mgcv)
+
+dati_gam <- dati_incrementi %>%
+  mutate(
+    I_c = I - 280,
+    D_c = D - 18,
+    P_c = P - 25.5,
+    id_biomassa = as.factor(id_biomassa) # Necessario per l'effetto random
+  )
+
+modello_gam <- gam(
+  incremento_OD ~ s(tempo, k = 4) +           # Andamento temporale comune
+    s(I_c, D_c, k = 4) +                # Superficie di risposta (interazione I e D)
+    sP_c +                        # Effetto lineare di P
+    s(id_biomassa, bs = "re"),   # Effetto random sulle biomasse (id_biomassa)
+  data = dati_gam,
+  method = "REML"                              # Metodo più robusto per la stima
+)
+
+summary(modello_gam)
+
+plot(modello_gam, terms = "s(I_c, D_c, k = 4)", se = T)
+
+# Creiamo la griglia
+grid_gam <- expand.grid(
+  tempo = 6,                   # Scegliamo il giorno del picco osservato nei grafici
+  I_c = seq(-190, 190, length.out = 50),
+  D_c = seq(-6, 6, length.out = 50),
+  P_c = 0,                     # Punto centrale (P=25.5)
+  id_biomassa = dati_gam$id_biomassa[1] # Un ID arbitrario (verrà ignorato con exclude)
+)
+
+# Predizione escludendo l'effetto random (per avere la media)
+grid_gam$Pred_Incremento <- predict(modello_gam, newdata = grid_gam, exclude = "s(id_biomassa)")
+
+# Trovare il massimo
+ottimo_gam <- grid_gam[which.max(grid_gam$Pred_Incremento), ]
+
+# Creazione di un nuovo dataframe con i valori reali
+ottimo_reale <- ottimo_gam %>%
+  mutate(
+    I_reale = I_c + 280,
+    D_reale = D_c + 18,
+    P_reale = P_c + 25.5,
+    Tempo_reale = tempo
+  ) %>%
+  select(Tempo_reale, I_reale, D_reale, P_reale, Pred_Incremento)
+
+print(ottimo_reale)
+
+par(mfrow=c(2,2))
+plot(modello_gam, all.terms = T)
+
+# -------------------------------------------------------------------------
+gam_biv <- gam(incremento_OD~lo(I, D, P, span = 0.1) + s(tempo, k = 4), data = dati_incrementi)
+
+I_grid <- seq(min(dati_incrementi$I), max(dati_incrementi$I), l = 50)
+D_grid <- seq(min(dati_incrementi$D), max(dati_incrementi$D), l = 50)
+Xg <- expand.grid(I = I_grid, D = D_grid, tempo = 6, P = 0)
+y_hat <- predict(gam_biv, Xg)
+z_matrix <- matrix(y_hat, nrow = length(I_grid), ncol = length(D_grid))
+
+persp(I_grid, D_grid, z_matrix)
+# -------------------------------------------------------------------------
+
+modello_gam2 <- gam(
+  incremento_OD ~ s(tempo, k = 4) +           # Andamento temporale comune
+    s(I_c, D_c, k = 4) +                # Superficie di risposta (interazione I e D)
+    s(P_c, k = 3) +                        # Effetto lineare di P
+    s(id_biomassa, bs = "re"),   # Effetto random sulle biomasse (id_biomassa)
+  data = dati_gam,
+  method = "REML"                              # Metodo più robusto per la stima
+)
+
+summary(modello_gam)
+
+par(mfrow=c(2,2))
+plot(modello_gam2, se = T)
+
+# Creiamo la griglia
+grid_gam <- expand.grid(
+  tempo = 6,                   # Scegliamo il giorno del picco osservato nei grafici
+  I_c = seq(-190, 190, length.out = 50),
+  D_c = seq(-6, 6, length.out = 50),
+  P_c = seq(-25.5, 25.5, length.out = 50),                     
+  id_biomassa = dati_gam$id_biomassa[1] # Un ID arbitrario (verrà ignorato con exclude)
+)
+
+# Predizione escludendo l'effetto random (per avere la media)
+grid_gam$Pred_Incremento <- predict(modello_gam2, newdata = grid_gam, exclude = "s(id_biomassa)")
+
+# Trovare il massimo
+ottimo_gam <- grid_gam[which.max(grid_gam$Pred_Incremento), ]
+
+# Creazione di un nuovo dataframe con i valori reali
+ottimo_reale <- ottimo_gam %>%
+  mutate(
+    I_reale = I_c + 280,
+    D_reale = D_c + 18,
+    P_reale = P_c + 25.5,
+    Tempo_reale = tempo
+  ) %>%
+  select(Tempo_reale, I_reale, D_reale, P_reale, Pred_Incremento)
+
+print(ottimo_reale)
