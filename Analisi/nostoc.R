@@ -228,7 +228,7 @@ ggplot(dati, aes(x = tempo, y = OD, color = consumo)) +
   )
 
 
-## incrementi rispetto a N0 ----
+## Incrementi rispetto a N0 ----
 
 dati$N0 <- rep(dati[dati$tempo==0,]$OD, each=7)
 
@@ -336,7 +336,7 @@ ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = condi
   theme_minimal()
 
 
-## salvataggio ----
+## Salvataggio ----
 
 save(dati, dati_incrementi, dati_incrementi_rapporti,
      file = "Analisi/dati_modificati.Rdata")
