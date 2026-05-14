@@ -240,7 +240,7 @@ ggplot(dati, aes(x = tempo, y = OD, colour=N0)) +
   labs(
     title = "Impatto del primo valore sulla Crescita",
     subtitle = "Le linee spesse indicano la media per ogni livello di intensità luminosa totale",
-    x = "Tempo (giorni)",
+    x = "Tempo (settimane)",
     y = "Resa di Biomassa (OD)",
     color = "N0"
   ) +
@@ -290,6 +290,20 @@ ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = consumo)) +
     subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
     x = "Giorno (t)",
     y = "Delta OD (OD[t] - OD[t-1])",
+    color = "Settimana (I*D)"
+  ) +
+  theme_minimal()
+
+ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = condizione_sperimentale)) +
+  geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
+  stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", size = 1) +
+  scale_color_viridis_d(option = "plasma") +
+  labs(
+    title = "Velocità di crescita: Incrementi giornalieri di OD",
+    subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
+    x = "Settimana (t)",
+    y = "Delta OD (OD[t] - OD[t-1])",
     color = "Consumo (I*D)"
   ) +
   theme_minimal()
@@ -307,7 +321,7 @@ dati_incrementi_rapporti <- dati %>%
   filter(!is.na(incremento_OD)) |> # Rimuoviamo il tempo 0 (che non ha incremento)
   ungroup()
 
-ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = consumo)) +
+ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = condizione_sperimentale)) +
   geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 1) +
@@ -315,9 +329,9 @@ ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = consu
   labs(
     title = "Velocità di crescita: Incrementi giornalieri di OD",
     subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
-    x = "Giorno (t)",
+    x = "Settimana (t)",
     y = "Delta OD (OD[t] - OD[t-1])",
-    color = "Consumo (I*D)"
+    color = "Settimana (I*D)"
   ) +
   theme_minimal()
 
