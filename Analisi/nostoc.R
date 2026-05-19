@@ -251,26 +251,11 @@ ggplot(dati, aes(x = tempo, y = OD, colour=N0)) +
   )
 
 
-# Aggiunta del tempo 0 ----
-
-library(dplyr)
-dati_aggiornati <- dati %>%
-  mutate(tempo = tempo + 1)
-osservazioni_t0 <- dati_aggiornati %>%
-  distinct(id_biomassa, .keep_all = TRUE) %>%
-  mutate(
-    tempo = 0,
-    OD = 0.01
-  )
-dati_completi <- bind_rows(dati_aggiornati, osservazioni_t0) %>%
-  arrange(id_biomassa, tempo)
-head(dati_completi, 8)
-
 ## Dati incrementali: differenze ----
 
 library(dplyr)
 
-dati_incrementi <- dati_completi %>%
+dati_incrementi <- dati %>%
   group_by(id_biomassa) %>%
   arrange(tempo) %>%
   mutate(

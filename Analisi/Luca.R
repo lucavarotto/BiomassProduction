@@ -26,7 +26,7 @@ ggplot(conteggi, aes(x = as.factor(I), y = as.factor(D))) +
   ) +
   theme_minimal()
 
-# modelli biologici ----
+# Modelli biologici ----
 
 # install.packages("MicrobialGrowth")
 
@@ -36,7 +36,7 @@ library(MicrobialGrowth)
 #g
 
 
-# regressione gompertz con effetti casuali ----
+# Regressione gompertz con effetti casuali ----
 
 # Asym rappresenta la capacità portante o il valore massimo teorico
 
@@ -51,9 +51,9 @@ library(MicrobialGrowth)
 
 dati_m_gompertz <- na.omit(dati)
 dati_m_gompertz <- dati_m_gompertz |> mutate(
-  I = I - 280,
-  D = D - 18,
-  P = P - 25.5
+  I = (I - 280) / ((max(dati$I) - min(dati$I))/2),
+  D = (D - 18 / ((max(dati$D) - min(dati$D))/2)),
+  P = (P - 25.5) / ((max(dati$P) - min(dati$P))/2)
 )
 
 library(nlme)
@@ -103,7 +103,8 @@ ggplot(dati_m_gompertz, aes(x = tempo, color = as.factor(condizione_sperimentale
   geom_point(aes(y = OD), alpha = 0.6) +
   geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
   geom_line(aes(y = predicted, group = id_biomassa), linewidth = 1.2)+
-  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 3, nrow = 3, page = 6) +
+  facet_wrap_paginate(~ id_biomassa, scales = "free_y",
+                      ncol = 3, nrow = 3, page = 5) +
   scale_color_viridis_d(option = "plasma", guide = "none") +
   labs(
     title = "Confronto Dati Reali vs Stima Gompertz",
@@ -113,7 +114,7 @@ ggplot(dati_m_gompertz, aes(x = tempo, color = as.factor(condizione_sperimentale
   ) +
   theme_minimal()
 
-# regressione gompertz solo fisso ----
+# Regressione gompertz solo fisso ----
 
 modello_gompertz_fisso <- gnls(
   model = OD ~ SSgompertz(tempo, Asym, b2, b3),
@@ -157,15 +158,22 @@ matrix(coef(modello_gompertz_fisso), nrow=3, byrow=T) %*%
   t(as.matrix(model.matrix(~(I + D)^2+P, data=dati[1,])))
 
 
-# modello parametrico sugli incrementi ----
+# Modello parametrico sugli incrementi ----
 
 dati_lme <- na.omit(dati_incrementi)
 dati_lme <- dati_incrementi |> mutate(
-  I = I - 280,
-  D = D - 18,
-  P = P - 25.5
+  I = (I - 280) / ((max(dati$I) - min(dati$I))/2),
+  D = (D - 18 / ((max(dati$D) - min(dati$D))/2)),
+  P = (P - 25.5) / ((max(dati$P) - min(dati$P))/2)
 )
 dati_lme$tempo <- dati_lme$tempo + 1
+dati_lme$tempo2 <- dati_lme$tempo^2
+
+lm0 <- lm(OD ~ tempo + tempo2 +
+            I*D + P + I(I^2):I(D^2) + I(P^2),
+          data=dati_lme)
+summary(lm0)
+car::vif(lm0, type="predictor")
 
 library(lme4)
 colnames(dati_lme)
@@ -201,6 +209,8 @@ m2 <- lme(incremento_OD ~ tempo + I(tempo^2) + I(tempo^3) + (I + D)^2+P +
 )
 summary(m2)
 AIC(m0, m1, m2)
+
+
 
 library(ggforce)
 library(ggplot2)
@@ -246,103 +256,3 @@ ggplot(dati_lme, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
   ) + 
   theme_minimal() +
   theme(strip.text = element_text(face = "bold"))
-
-# GAM incrementi ----
-
-library(mgcv)
-
-dati_gam <- na.omit(dati_incrementi)
-dati_gam <- dati_incrementi |> mutate(
-  I = I - 280,
-  D = D - 18,
-  P = P - 25.5
-)
-dati_gam$Gruppo_ID <- interaction(dati_gam$I, dati_gam$D)
-dati_gam$id_biomassa <- as.factor(dati_gam$id_biomassa)
-
-modello_gam <- gam(
-  incremento_OD ~ 
-    # Effetti principali delle covariate lineari
-    I + D + P + (I + D)^2 + 
-    # s(tempo) crea la spline. 'by' permette alla curva di cambiare per ogni combinazione di I e D
-    s(tempo, by = Gruppo_ID, k = 5) + 
-    # Interazione liscia con P (opzionale, se pensi che P cambi la forma della curva)
-    s(tempo, by = P, k = 5) + 
-    # EFFETTO CASUALE: l'intercetta casuale per ogni biomassa (equivalente a (1|ID) nei modelli misti)
-    s(id_biomassa, bs = "re"), 
-  
-  data = dati_gam,
-  method = "REML" # Consigliato per stime accurate degli effetti casuali e dello smoothing
-)
-
-summary(modello_gam)
-
-## plot degli effetti stimati ----
-
-x11()
-plot(modello_gam, 
-     pages = 1,           # Mette tutto in una pagina
-     shade = TRUE,        # Aggiunge l'intervallo di confidenza ombreggiato
-     residuals = TRUE,    # Mostra i punti dei residui parziali
-     pch = 1, cex = 0.5, 
-     main = "Effetti Smooth del Tempo")
-
-## altro plot degli effetti stimati ----
-
-library(gratia)
-x11()
-draw(modello_gam)
-
-## plot fitted vs osservati ----
-
-library(tidymv)
-library(ggplot2)
-library(dplyr)
-
-dati_gam <- dati_gam %>%
-  mutate(Valori_Stimati = predict(modello_gam, newdata = .))
-
-dati_gam %>%
-  ggplot(aes(x = tempo)) +
-  # Punti che indicano i valori realmente osservati
-  geom_point(aes(y = incremento_OD, color = condizione_sperimentale), alpha = 0.6, size = 2) +
-  # Linea che indica il trend stimato dal modello GAM
-  geom_line(aes(y = Valori_Stimati, group = id_biomassa), color = "black", linewidth = 0.8) +
-  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 3, nrow = 3, page = 1) +
-  theme_minimal() +
-  labs(
-    title = "Confronto Osservati vs Stimati (GAM)",
-    subtitle = "I punti rappresentano i dati reali, la linea nera è la stima del modello",
-    x = "Settimana (t)", y = "Delta OD", color = "Disegno (I_D)"
-  ) +
-  theme(
-    strip.background = element_rect(fill = "gray95", color = NA),
-    strip.text = element_text(face = "bold")
-  )
-
-dati_cumulati <- dati_gam %>%
-  arrange(id_biomassa, tempo) %>%
-  group_by(id_biomassa) %>%
-  mutate(
-    OD_Cumulato_Osservato = cumsum(incremento_OD),
-    OD_Cumulato_Stimato   = cumsum(Valori_Stimati)
-  ) %>%
-  ungroup()
-
-dati_cumulati %>%
-  ggplot(aes(x = tempo)) +
-  geom_point(aes(y = OD_Cumulato_Osservato, color = condizione_sperimentale), alpha = 0.6, size = 2) +
-  geom_line(aes(y = OD_Cumulato_Stimato, group = id_biomassa), color = "black", linewidth = 0.8) +
-  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 3, nrow = 3, page = 1) +
-  theme_minimal() +
-  labs(
-    title = "Confronto Osservati vs Stimati su Scala CUMULATA (Biomassa Totale)",
-    subtitle = "I punti indicano il cumulato reale, la linea nera è l'integrale della stima GAM",
-    x = "Settimana (t)", 
-    y = "OD Cumulato (Biomassa)", 
-    color = "Disegno (I_D)"
-  ) +
-  theme(
-    strip.background = element_rect(fill = "gray95", color = NA),
-    strip.text = element_text(face = "bold")
-  )
