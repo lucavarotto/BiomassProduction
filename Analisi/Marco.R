@@ -1,7 +1,7 @@
 rm(list=ls());gc();
 
 load("Analisi/dati_modificati.Rdata")
-
+library(tidyverse)
 library(readxl)
 library(dplyr)
 library(ggplot2)
@@ -390,7 +390,7 @@ ggplot(dati_plot, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
   geom_point(aes(y = OD), alpha = 0.6) +
   geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
   geom_line(aes(y = predicted, group = id_biomassa), linewidth = 1.2)+
-  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 3, nrow = 3, page = 1) +
+  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 5, nrow = 5, page = 1) +
   scale_color_viridis_d(option = "plasma", guide = "none") +
   labs(
     title = "Confronto Dati Reali vs Stima Gompertz",
@@ -462,6 +462,28 @@ pred_curve_10s |>
   select(I, D, P, tempo, estimate, conf.low, conf.high) |>
   group_by(I, D, P) |>
   group_split()
+
+pred_curve_tutto_sc <- predictions(
+  modello_gompertz,
+  newdata = datagrid(
+    tempo = 0:6,  # i 7 punti osservati
+    I = seq(-190,190,by = 5),
+    D = seq(-6,6,by = .5),
+    P = seq(-24.5,24.5,by = 1),
+    id_biomassa = dati_m_gompertz$id_biomassa[1]
+  ),
+  re.form = NA
+)
+
+pred_curve_tutto_sc |> 
+  as_tibble() |>
+  select(I, D, P, tempo, estimate, conf.low, conf.high) |>
+  group_by(I, D, P) |>
+  slice_tail(n = 1) |> 
+  ungroup() |>
+  arrange(desc(estimate))
+
+
 
 # guardiamo comparisons
 library(marginaleffects)
@@ -540,7 +562,7 @@ pred_curve_nuove <- predictions(
   newdata = datagrid(
     tempo = 0:6,  # i 7 punti osservati
     I = seq(570,670,by = 10) - 280,
-    D = seq(21,27,by=1) - 18,
+    D = seq(18,27,by=1) - 18,
     P = seq(60,75,by=3) - 25.5,
     id_biomassa = dati_m_gompertz$id_biomassa[1]
   ),
@@ -551,6 +573,194 @@ pred_curve_nuove |>
   as_tibble() |>
   select(I, D, P, tempo, estimate, conf.low, conf.high) |>
   group_by(I, D, P) |>
-  slice_tail(n = 1) |>
+  slice_tail(n = 1) |> 
   ungroup() |>
-  arrange(desc(estimate))
+  arrange(desc(estimate)) |> 
+  print(n = 50)
+
+pred_curve |> 
+  as_tibble() |>
+  select(I, D, P, tempo, estimate, conf.low, conf.high) |>
+  filter(is.finite(tempo)) |>  # esclude tempo = Inf
+  ggplot(aes(x = tempo, y = estimate, color = as.factor(I))) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = as.factor(I)),
+              alpha = 0.15, color = NA) +
+  facet_grid(D ~ P, labeller = label_both) +
+  labs(
+    x = "Tempo",
+    y = "OD predetto",
+    color = "I",
+    fill = "I",
+    title = "Curve predette per condizione sperimentale"
+  ) +
+  theme_minimal()
+
+pred_marginale_I <- pred_curve_10s |>
+  as_tibble() |>
+  filter(is.finite(tempo)) |>
+  mutate(I = I + 280) |>  # o qualunque sia il valore di centratura
+  group_by(I, tempo) |>
+  summarise(estimate = mean(estimate), .groups = "drop")
+
+ggplot(dati, aes(x = tempo, y = OD, color = as.factor(I), group = id_biomassa)) +
+  geom_line(alpha = 0.3) +
+  geom_point(alpha = 0.3) +
+  geom_line(data = pred_marginale_I,
+            aes(x = tempo, y = estimate, color = as.factor(I), group = as.factor(I)),
+            linewidth = 1.5, inherit.aes = FALSE) +
+  labs(
+    title = "Traiettorie di crescita per il fattore I",
+    subtitle = "Linee spesse = curva predetta marginale; linee sottili = dati osservati",
+    x = "Tempo (giorni)",
+    y = "Optical Density (OD)",
+    color = "Fattore I"
+  ) +
+  theme_minimal()
+
+unique(dati$I)
+unique(pred_marginale_I$I)
+
+# modello gompertz con effetto quadratico dei predittori sui parametri della gompertz
+modello_gompertz_quad <- nlme(
+  model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  fixed = list(
+    Asym ~ (I+D)^2+I(I^2) + I(D^2) + P + I(P^2),
+    b2 ~ (I+D)^2+I(I^2) + I(D^2) + P + I(P^2),           
+    b3 ~ (I+D)^2+I(I^2) + I(D^2) + P + I(P^2)     
+  ),
+  random = Asym ~ 1 | id_biomassa,
+  # Nota: i valori di start devono ora includere gli zeri per i nuovi termini di interazione
+  # In un modello I*D*P ci sono 8 coefficienti (intercetta + 3 principali + 3 doppie + 1 tripla)
+  start = c(
+    Asym = c(5, rep(0, 7)), 
+    b2 = c(2, rep(0, 7)),     
+    b3 = c(0.8, rep(0, 7)) )
+)
+AIC(modello_gompertz,modello_gompertz_quad)
+
+pred_curve_quad <- predictions(
+  modello_gompertz_quad,
+  newdata = datagrid(
+    tempo = 0:6,  # i 7 punti osservati
+    I = unique(dati_m_gompertz$I),
+    D = unique(dati_m_gompertz$D),
+    P = unique(dati_m_gompertz$P),
+    id_biomassa = dati_m_gompertz$id_biomassa[1]
+  ),
+  re.form = NA
+)
+
+pred_curve_quad |> 
+  as_tibble() |>
+  select(I, D, P, tempo, estimate, conf.low, conf.high) |>
+  group_by(I, D, P) |>
+  group_split()
+
+pred_curve_nuove_quad <- predictions(
+  modello_gompertz_quad,
+  newdata = datagrid(
+    tempo = 0:6,  # i 7 punti osservati
+    I = seq(570,670,by = 10) - 280,
+    D = seq(18,27,by=1) - 18,
+    P = seq(60,75,by=3) - 25.5,
+    id_biomassa = dati_m_gompertz$id_biomassa[1]
+  ),
+  re.form = NA
+)
+
+pred_curve_nuove_quad |> 
+  as_tibble() |>
+  select(I, D, P, tempo, estimate, conf.low, conf.high) |>
+  group_by(I, D, P) |>
+  slice_tail(n = 1) |> 
+  ungroup() |>
+  arrange(desc(estimate)) |> 
+  print(n = 20)
+
+predicted_quad <- predict(modello_gompertz_quad)
+
+ggplot(dati_m_gompertz, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
+  geom_point(aes(y = OD), alpha = 0.6) +
+  geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
+  geom_line(aes(y = predicted_quad, group = id_biomassa), linewidth = 1.2)+
+  facet_wrap_paginate(~ id_biomassa, scales = "free_y", ncol = 5, nrow = 5, page = 3) +
+  scale_color_viridis_d(option = "plasma", guide = "none") +
+  labs(
+    title = "Confronto Dati Reali vs Stima Gompertz con termini quadratici",
+    subtitle = "I punti indicano le osservazioni reali; le linee continue rappresentano il modello NLME",
+    x = "Tempo (giorni)",
+    y = "Optical Density (OD)"
+  ) +
+  theme_minimal()
+
+# modelli standardizzati
+dati_m_gompertz_st <- na.omit(dati)
+dati_m_gompertz_st <- dati_m_gompertz_st |> mutate(
+  I = (I - 280) / 190,
+  D = (D - 18) / 6,
+  P = (P - 25.5)/24.5
+)
+
+modello_gompertz_st <- nlme(
+  model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz_st,
+  fixed = list(
+    Asym ~ (I+D)^2+P,
+    b2 ~ (I+D)^2+P,           
+    b3 ~ (I+D)^2+P     
+  ),
+  random = Asym ~ 1 | id_biomassa,
+  # Nota: i valori di start devono ora includere gli zeri per i nuovi termini di interazione
+  # In un modello I*D*P ci sono 8 coefficienti (intercetta + 3 principali + 3 doppie + 1 tripla)
+  start = c(
+    Asym = c(5, rep(0, 4)), 
+    b2 = c(2, rep(0, 4)),     
+    b3 = c(0.8, rep(0, 4)) )
+)
+
+modello_gompertz_st %>% AIC
+# modello_gompertz_fisso %>% AIC
+# dati_m_gompertz$predicted_fisso <- predict(modello_gompertz)
+dati_m_gompertz_st$predicted <- predict(modello_gompertz_st)
+
+library(marginaleffects)
+pred_curve_st <- predictions(
+  modello_gompertz_st,
+  newdata = datagrid(
+    tempo = 0:6,  # i 7 punti osservati
+    I = unique(dati_m_gompertz_st$I),
+    D = unique(dati_m_gompertz_st$D),
+    P = unique(dati_m_gompertz_st$P),
+    id_biomassa = dati_m_gompertz_st$id_biomassa[1]
+  ),
+  re.form = NA
+)
+
+pred_curve_st |> 
+  as_tibble() |>
+  select(I, D, P, tempo, estimate, conf.low, conf.high) |>
+  group_by(I, D, P) |>
+  group_split()
+
+pred_curve_nuove_st <- predictions(
+  modello_gompertz_st,
+  newdata = datagrid(
+    tempo = 0:6,  # i 7 punti osservati
+    I = (seq(570,670,by = 10) - 280)/190,
+    D = (seq(18,27,by=1) - 18)/6,
+    P = (seq(60,75,by=3) - 25.5)/24.5,
+    id_biomassa = dati_m_gompertz$id_biomassa[1]
+  ),
+  re.form = NA
+)
+
+pred_curve_nuove_st |> 
+  as_tibble() |>
+  select(I, D, P, tempo, estimate, conf.low, conf.high) |>
+  group_by(I, D, P) |>
+  slice_tail(n = 1) |> 
+  ungroup() |>
+  arrange(desc(estimate)) |> 
+  print(n = 5)
