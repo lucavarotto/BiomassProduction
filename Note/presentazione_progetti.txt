@@ -13,6 +13,12 @@ Vogliamo capire come le condizioni sperimentali influenzano la produzione di bio
 Finos suggerisce di modellare tutta la superficie e di guardare anche ai valori non osservati.
 Fractional Factorial Design.
 
+Se stimo un parametro casuale in più non distorco ma perdo potenza.
+Se non stimo un parametro casuale che servirebbe perdo il controllo
+dell'errore di primo tipo.
+
+Regressione pesata con i pesi sui tempi.
+
 Il disegno è stato progettato male, 8 settimane non bastano per vedere la decrescita.
 
 OD = optical density = densità ottica della coltura, si tratta di una grandezza adimensionale comunemente usata come proxy della concentrazione di biomassa

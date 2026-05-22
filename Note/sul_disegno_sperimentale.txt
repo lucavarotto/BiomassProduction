@@ -1,0 +1,13 @@
+In un disegno sperimentale ortogonale, se prendi un qualsiasi livello del
+Fattore A, vedrai che al suo interno tutti i livelli del Fattore B e del
+Fattore C compaiono lo stesso numero di volte. Il nostro non è ortonale.
+
+response surface design: l'obiettivo è trovare le condizioni operative
+ottimali dove si massimizza o minimizza la risposta. Si basa sull'adattamento
+di un modello polinomiale (spesso di secondo grado)
+
+Il Central Composite Face-Centered (CCF) è un disegno sperimentale della
+classe RSM (Response Surface Methodology), ideale per modellare superfici di
+risposta quadratiche con esperimenti su tre livelli (\(+1, 0, -1\)).
+Il design CCF si distingue dai classici CCD per i punti stellari,
+posizionati al centro delle facce del cubo.
