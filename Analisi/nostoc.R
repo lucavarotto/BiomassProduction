@@ -320,6 +320,29 @@ ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = condi
   ) +
   theme_minimal()
 
+library(ggplot2)
+
+ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = condizione_sperimentale)) +
+  geom_line(aes(group = id_biomassa), alpha = 0.10, linewidth = 0.4, na.rm = TRUE) +
+  # 'se = FALSE' nasconde l'intervallo di confidenza per non affollare il grafico, 
+  # puoi metterlo a TRUE se vuoi vedere l'incertezza della media.
+  geom_smooth(aes(group = condizione_sperimentale), 
+              method = "loess", span = 0.8,
+              se = FALSE, linewidth = 1.3, na.rm = TRUE) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 0.8) +
+  scale_color_viridis_d(option = "plasma") +
+  labs(
+    title = "Velocità di crescita: Incrementi giornalieri di OD",
+    subtitle = "Andamento medio lissato degli incrementi tra un giorno e il successivo",
+    x = "Settimana (t)",
+    y = "Delta OD (OD[t] - OD[t-1])",
+    color = "Settimana (I*D)"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(), # Pulisce il grafico per un look più "smooth"
+    legend.position = "right"
+  )
 
 ## Salvataggio ----
 
