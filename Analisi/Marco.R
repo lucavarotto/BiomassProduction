@@ -339,6 +339,7 @@ ids_da_mostrare <- 1:53
 dati_plot <- dati_m_gompertz %>%
   filter(id_biomassa %in% ids_da_mostrare)
 
+dati_m_gompertz$predicted_fisso <- predict(modello_gompertz_fisso)
 
 library(ggforce)
 ggplot(dati_plot, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
@@ -377,6 +378,123 @@ modello_gompertz %>% AIC
 # modello_gompertz_fisso %>% AIC
 # dati_m_gompertz$predicted_fisso <- predict(modello_gompertz)
 dati_m_gompertz$predicted <- predict(modello_gompertz)
+
+res_norm <- residuals(modello_gompertz, type = "normalized")
+res_raw  <- residuals(modello_gompertz, type = "response")
+par(mfrow = c(1, 2))
+# Q-Q plot
+qqnorm(res_norm, main = "Q-Q Plot residui normalizzati")
+qqline(res_norm, col = "red", lwd = 2)
+
+# Istogramma con curva normale
+hist(res_norm, freq = FALSE, breaks = 20,
+     main = "Distribuzione residui", xlab = "Residui")
+curve(dnorm(x, mean = mean(res_norm), sd = sd(res_norm)),
+      add = TRUE, col = "red", lwd = 2)
+
+# Shapiro-Wilk (ottimo per n < 5000)
+shapiro.test(res_norm)
+
+# Kolmogorov-Smirnov
+ks.test(res_norm, "pnorm", mean = mean(res_norm), sd = sd(res_norm))
+
+# Jarque-Bera (sensibile a skewness e curtosi)
+# install.packages("tseries")
+library(tseries)
+jarque.bera.test(res_norm)
+
+modello_gompertz_log <- nlme(
+  model = log(OD) ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  fixed = list(
+    Asym ~ (I+D)^2+P,
+    b2 ~ (I+D)^2+P,           
+    b3 ~ (I+D)^2+P     
+  ),
+  random = Asym ~ 1 | id_biomassa,
+  # Nota: i valori di start devono ora includere gli zeri per i nuovi termini di interazione
+  # In un modello I*D*P ci sono 8 coefficienti (intercetta + 3 principali + 3 doppie + 1 tripla)
+  start = c(
+    Asym = c(5, rep(0, 4)), 
+    b2 = c(2, rep(0, 4)),     
+    b3 = c(0.8, rep(0, 4)) )
+)
+
+modello_gompertz_log %>% AIC
+# modello_gompertz_fisso %>% AIC
+# dati_m_gompertz$predicted_fisso <- predict(modello_gompertz)
+dati_m_gompertz$predicted_log <- predict(modello_gompertz_log)
+
+res_norm_log <- residuals(modello_gompertz_log, type = "normalized")
+res_raw_log  <- residuals(modello_gompertz_log, type = "response")
+par(mfrow = c(1, 2))
+# Q-Q plot
+qqnorm(res_norm_log,main = "Q-Q Plot residui normalizzati")
+qqline(res_norm_log, col = "red", lwd = 2)
+
+# Istogramma con curva normale
+hist(res_norm_log, freq = FALSE, breaks = 20,
+     main = "Distribuzione residui", xlab = "Residui")
+curve(dnorm(x, mean = mean(res_norm), sd = sd(res_norm)),
+      add = TRUE, col = "red", lwd = 2)
+
+# Shapiro-Wilk (ottimo per n < 5000)
+shapiro.test(res_norm_log)
+
+# Kolmogorov-Smirnov
+ks.test(res_norm_log, "pnorm", mean = mean(res_norm_log), sd = sd(res_norm_log))
+
+# Jarque-Bera (sensibile a skewness e curtosi)
+# install.packages("tseries")
+library(tseries)
+jarque.bera.test(res_norm_log)
+
+modello_gompertz_sqrt <- nlme(
+  model = sqrt(OD) ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  fixed = list(
+    Asym ~ (I+D)^2+P,
+    b2 ~ (I+D)^2+P,           
+    b3 ~ (I+D)^2+P     
+  ),
+  random = Asym ~ 1 | id_biomassa,
+  # Nota: i valori di start devono ora includere gli zeri per i nuovi termini di interazione
+  # In un modello I*D*P ci sono 8 coefficienti (intercetta + 3 principali + 3 doppie + 1 tripla)
+  start = c(
+    Asym = c(5, rep(0, 4)), 
+    b2 = c(2, rep(0, 4)),     
+    b3 = c(0.8, rep(0, 4)) )
+)
+
+modello_gompertz_sqrt %>% AIC
+# modello_gompertz_fisso %>% AIC
+# dati_m_gompertz$predicted_fisso <- predict(modello_gompertz)
+dati_m_gompertz$predicted_sqrt <- predict(modello_gompertz_sqrt)
+
+res_norm_sqrt <- residuals(modello_gompertz_sqrt, type = "normalized")
+res_raw_sqrt  <- residuals(modello_gompertz_sqrt, type = "response")
+par(mfrow = c(1, 2))
+# Q-Q plot
+qqnorm(res_norm_sqrt,main = "Q-Q Plot residui normalizzati")
+qqline(res_norm_sqrt, col = "red", lwd = 2)
+
+# Istogramma con curva normale
+hist(res_norm_sqrt, freq = FALSE, breaks = 20,
+     main = "Distribuzione residui", xlab = "Residui")
+curve(dnorm(x, mean = mean(res_norm_sqrt), sd = sd(res_norm_sqrt)),
+      add = TRUE, col = "red", lwd = 2)
+
+# Shapiro-Wilk (ottimo per n < 5000)
+shapiro.test(res_norm_sqrt)
+
+# Kolmogorov-Smirnov
+ks.test(res_norm_sqrt, "pnorm", mean = mean(res_norm_sqrt), sd = sd(res_norm_sqrt))
+
+# Jarque-Bera (sensibile a skewness e curtosi)
+# install.packages("tseries")
+library(tseries)
+jarque.bera.test(res_norm_sqrt)
+
 
 set.seed(123) # Per riproducibilità
 ids_da_mostrare <- 1:53
@@ -764,3 +882,56 @@ pred_curve_nuove_st |>
   ungroup() |>
   arrange(desc(estimate)) |> 
   print(n = 5)
+
+# approccio bayesiano
+# install.packages('brms')
+library(brms)
+
+prior <- c(
+  # Intercette
+  prior(normal(14, 5),    class = "b", coef = "Intercept", nlpar = "Asym"),
+  prior(normal(5, 2),     class = "b", coef = "Intercept", nlpar = "b2"),
+  prior(normal(0.7, 0.3), class = "b", coef = "Intercept", nlpar = "b3"),
+  
+  # Coefficienti delle covariate (tutti gli altri b)
+  prior(normal(0, 2), class = "b", nlpar = "Asym"),
+  prior(normal(0, 2), class = "b", nlpar = "b2"),
+  prior(normal(0, 2), class = "b", nlpar = "b3"),
+  
+  # Varianza random
+  prior(cauchy(0, 2), class = "sd", nlpar = "Asym"),
+  
+  # Nu della Student-t (già ha un default ma puoi restringerlo)
+  prior(gamma(2, 0.1), class = "nu")
+)
+brm(bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
+         Asym ~ (I + D)^2 + P + (1 | id_biomassa),
+         b2 ~ (I + D)^2 + P,
+         b3 ~ (I + D)^2 + P,
+         nl = TRUE,family = student()), 
+    data = dati_m_gompertz,prior = prior, chains = 0)  # chains = 0 controlla senza campionare
+
+fit_brms <- brm(
+  bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
+     Asym ~ (I + D)^2 + P + (1 | id_biomassa),
+     b2 ~ (I + D)^2 + P,
+     b3 ~ (I + D)^2 + P,
+     nl = TRUE,family = student()),
+  data = dati_m_gompertz,
+  prior = prior,
+  chains = 4,
+  iter = 2000,
+  cores = 4
+)
+
+default_prior(
+  bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
+     Asym ~ (I + D)^2 + P + (1 | id_biomassa),
+     b2 ~ (I + D)^2 + P,
+     b3 ~ (I + D)^2 + P,
+     nl = TRUE),
+  family = student(),
+  data = dati_m_gompertz
+)
+
+#### Baranyi - Roberts pipeline
