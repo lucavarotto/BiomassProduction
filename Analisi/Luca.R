@@ -30,8 +30,8 @@ ggplot(conteggi, aes(x = as.factor(I), y = as.factor(D))) +
 
 # install.packages("MicrobialGrowth")
 
-colnames(dati)
-library(MicrobialGrowth)
+#colnames(dati)
+#library(MicrobialGrowth)
 #g <- MicrobialGrowth(x, y, model = "gompertz")
 #g
 
@@ -88,6 +88,10 @@ modello_gompertz3 <- update(modello_gompertz,
 modello_gompertz4 <- update(modello_gompertz,
                             random = Asym + b3 ~ 1 | id_biomassa)
 modello_gompertz5 <- update(modello_gompertz,
+                            random = Asym + b2 ~ 1 | id_biomassa)
+modello_gompertz6 <- update(modello_gompertz,
+                            random = b2 + b3 ~ 1 | id_biomassa)
+modello_gompertz7 <- update(modello_gompertz,
                             random = list(id_biomassa = pdDiag(Asym + b2 ~ 1)))
 AIC(modello_gompertz, modello_gompertz2, modello_gompertz3,
     modello_gompertz4)
@@ -186,7 +190,8 @@ m0 <- lme(incremento_OD ~ tempo + (I + D)^2+P + tempo:I + tempo:D + tempo:P,
                                msMaxEval = 400,
                                opt = "optim")
 )
-m1 <- lme(incremento_OD ~ tempo + I((log(tempo))^2) + (I + D)^2+P + I((log(tempo))^2):I + I((log(tempo))^2):D + I((log(tempo))^2):P,
+m1 <- lme(incremento_OD ~ tempo + I((log(tempo))^2) + (I + D)^2+P +
+            I((log(tempo))^2):I + I((log(tempo))^2):D + I((log(tempo))^2):P,
           random = ~ 1 + tempo | as.factor(id_biomassa), data=dati_lme,
           control = lmeControl(maxIter = 1000, # Il numero massimo di iterazioni durante la
                                # fase di ottimizzazione della stima di massima verosimiglianza
@@ -195,7 +200,8 @@ m1 <- lme(incremento_OD ~ tempo + I((log(tempo))^2) + (I + D)^2+P + I((log(tempo
                                msMaxEval = 400,
                                opt = "optim")
 )
-m2 <- lme(incremento_OD ~ tempo + I(tempo^2) + I(tempo^3) + (I + D)^2+P +
+m2 <- lme(incremento_OD ~ tempo + I(tempo^2) + I(tempo^3) +
+            (I + D)^2+P +
             I(tempo):I + I(tempo):D + I(tempo):P +
             I(tempo^2):I + I(tempo^2):D + I(tempo^2):P +
             I(tempo^3):I + I(tempo^3):D + I(tempo^3):P,
@@ -207,15 +213,25 @@ m2 <- lme(incremento_OD ~ tempo + I(tempo^2) + I(tempo^3) + (I + D)^2+P +
                                msMaxEval = 400,
                                opt = "optim")
 )
-summary(m2)
-AIC(m0, m1, m2)
+m3 <- lme(incremento_OD ~ tempo + I(tempo^2) + I(tempo^3) +
+            (I + D)^2+P,
+          random = ~ 1 + tempo | as.factor(id_biomassa), data=dati_lme,
+          control = lmeControl(maxIter = 1000, # Il numero massimo di iterazioni durante la
+                               # fase di ottimizzazione della stima di massima verosimiglianza
+                               msMaxIter = 100, # si riferisce all'ottimizzatore numerico
+                               niterEM = 50,
+                               msMaxEval = 400,
+                               opt = "optim")
+)
+summary(m3)
+AIC(m0, m1, m2, m3)
 
 
 
 library(ggforce)
 library(ggplot2)
 
-dati_lme$predicted <- fitted(m2)
+dati_lme$predicted <- fitted(m3)
 ggplot(dati_lme, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
   geom_point(aes(y = incremento_OD), alpha = 0.6) +
   geom_line(aes(y = incremento_OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
