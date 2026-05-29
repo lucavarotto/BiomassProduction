@@ -87,12 +87,8 @@ modello_gompertz3 <- update(modello_gompertz,
                             random = b3 ~ 1 | id_biomassa)
 modello_gompertz4 <- update(modello_gompertz,
                             random = Asym + b3 ~ 1 | id_biomassa)
-modello_gompertz5 <- update(modello_gompertz,
-                            random = Asym + b2 ~ 1 | id_biomassa)
-modello_gompertz6 <- update(modello_gompertz,
-                            random = b2 + b3 ~ 1 | id_biomassa)
-modello_gompertz7 <- update(modello_gompertz,
-                            random = list(id_biomassa = pdDiag(Asym + b2 ~ 1)))
+#modello_gompertz6 <- update(modello_gompertz,
+#                            random = list(id_biomassa = pdDiag(Asym + b2 ~ 1)))
 AIC(modello_gompertz, modello_gompertz2, modello_gompertz3,
     modello_gompertz4)
 
@@ -108,7 +104,7 @@ ggplot(dati_m_gompertz, aes(x = tempo, color = as.factor(condizione_sperimentale
   geom_line(aes(y = OD, group = id_biomassa), linetype = "dashed", alpha = 0.4) +
   geom_line(aes(y = predicted, group = id_biomassa), linewidth = 1.2)+
   facet_wrap_paginate(~ id_biomassa, scales = "free_y",
-                      ncol = 3, nrow = 3, page = 5) +
+                      ncol = 3, nrow = 3, page = 1) +
   scale_color_viridis_d(option = "plasma", guide = "none") +
   labs(
     title = "Confronto Dati Reali vs Stima Gompertz",
@@ -117,6 +113,24 @@ ggplot(dati_m_gompertz, aes(x = tempo, color = as.factor(condizione_sperimentale
     y = "Optical Density (OD)"
   ) +
   theme_minimal()
+
+X_m <- model.matrix(~(I+D)^2+P, data=dati_m_gompertz[1,])
+dim(X_m)
+
+f <- matrix(modello_gompertz$coefficients$fixed, nrow=3, byrow=T)
+dim(f)
+
+re <- modello_gompertz$coefficients$random$id_biomassa
+
+eval_gomp <- function(m, t, re=0){
+  Asym <- m[1]
+  b2 <- m[2]
+  b3 <- m[3]
+  (Asym  + re)*exp(-b2*(b3^t))
+}
+
+eval_gomp(f %*% t(X_m), 5, re[1])
+
 
 # Regressione gompertz solo fisso ----
 
