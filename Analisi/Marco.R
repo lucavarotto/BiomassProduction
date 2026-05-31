@@ -336,10 +336,12 @@ modello_gompertz_fisso <- gnls(
 set.seed(123) # Per riproducibilità
 ids_da_mostrare <- 1:53
 
+dati_m_gompertz$predicted_fisso <- predict(modello_gompertz_fisso)
+
 dati_plot <- dati_m_gompertz %>%
   filter(id_biomassa %in% ids_da_mostrare)
 
-dati_m_gompertz$predicted_fisso <- predict(modello_gompertz_fisso)
+
 
 library(ggforce)
 ggplot(dati_plot, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
@@ -366,6 +368,7 @@ modello_gompertz <- nlme(
     b3 ~ (I+D)^2+P     
   ),
   random = Asym ~ 1 | id_biomassa,
+  method = 'REML',
   # Nota: i valori di start devono ora includere gli zeri per i nuovi termini di interazione
   # In un modello I*D*P ci sono 8 coefficienti (intercetta + 3 principali + 3 doppie + 1 tripla)
   start = c(
@@ -374,7 +377,31 @@ modello_gompertz <- nlme(
     b3 = c(0.8, rep(0, 4)) )
 )
 
+modello_gompertz_ml <- nlme(
+  model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  fixed = list(
+    Asym ~ (I+D)^2+P,
+    b2 ~ (I+D)^2+P,           
+    b3 ~ (I+D)^2+P     
+  ),
+  random = Asym ~ 1 | id_biomassa,
+  method = 'ML',
+  # Nota: i valori di start devono ora includere gli zeri per i nuovi termini di interazione
+  # In un modello I*D*P ci sono 8 coefficienti (intercetta + 3 principali + 3 doppie + 1 tripla)
+  start = c(
+    Asym = c(5, rep(0, 4)), 
+    b2 = c(2, rep(0, 4)),     
+    b3 = c(0.8, rep(0, 4)) )
+)
+?nlme::nlme
 modello_gompertz %>% AIC
+modello_gompertz_ml %>% AIC
+summary(modello_gompertz)
+summary(modello_gompertz_ml)
+
+modello_gompertz_ml
+
 # modello_gompertz_fisso %>% AIC
 # dati_m_gompertz$predicted_fisso <- predict(modello_gompertz)
 dati_m_gompertz$predicted <- predict(modello_gompertz)
@@ -885,53 +912,206 @@ pred_curve_nuove_st |>
 
 # approccio bayesiano
 # install.packages('brms')
-library(brms)
+# library(brms)
 
-prior <- c(
-  # Intercette
-  prior(normal(14, 5),    class = "b", coef = "Intercept", nlpar = "Asym"),
-  prior(normal(5, 2),     class = "b", coef = "Intercept", nlpar = "b2"),
-  prior(normal(0.7, 0.3), class = "b", coef = "Intercept", nlpar = "b3"),
-  
-  # Coefficienti delle covariate (tutti gli altri b)
-  prior(normal(0, 2), class = "b", nlpar = "Asym"),
-  prior(normal(0, 2), class = "b", nlpar = "b2"),
-  prior(normal(0, 2), class = "b", nlpar = "b3"),
-  
-  # Varianza random
-  prior(cauchy(0, 2), class = "sd", nlpar = "Asym"),
-  
-  # Nu della Student-t (già ha un default ma puoi restringerlo)
-  prior(gamma(2, 0.1), class = "nu")
-)
-brm(bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
-         Asym ~ (I + D)^2 + P + (1 | id_biomassa),
-         b2 ~ (I + D)^2 + P,
-         b3 ~ (I + D)^2 + P,
-         nl = TRUE,family = student()), 
-    data = dati_m_gompertz,prior = prior, chains = 0)  # chains = 0 controlla senza campionare
-
-fit_brms <- brm(
-  bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
-     Asym ~ (I + D)^2 + P + (1 | id_biomassa),
-     b2 ~ (I + D)^2 + P,
-     b3 ~ (I + D)^2 + P,
-     nl = TRUE,family = student()),
-  data = dati_m_gompertz,
-  prior = prior,
-  chains = 4,
-  iter = 2000,
-  cores = 4
-)
-
-default_prior(
-  bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
-     Asym ~ (I + D)^2 + P + (1 | id_biomassa),
-     b2 ~ (I + D)^2 + P,
-     b3 ~ (I + D)^2 + P,
-     nl = TRUE),
-  family = student(),
-  data = dati_m_gompertz
-)
+# prior <- c(
+#   # Intercette
+#   prior(normal(14, 5),    class = "b", coef = "Intercept", nlpar = "Asym"),
+#   prior(normal(5, 2),     class = "b", coef = "Intercept", nlpar = "b2"),
+#   prior(normal(0.7, 0.3), class = "b", coef = "Intercept", nlpar = "b3"),
+#   
+#   # Coefficienti delle covariate (tutti gli altri b)
+#   prior(normal(0, 2), class = "b", nlpar = "Asym"),
+#   prior(normal(0, 2), class = "b", nlpar = "b2"),
+#   prior(normal(0, 2), class = "b", nlpar = "b3"),
+#   
+#   # Varianza random
+#   prior(cauchy(0, 2), class = "sd", nlpar = "Asym"),
+#   
+#   # Nu della Student-t (già ha un default ma puoi restringerlo)
+#   prior(gamma(2, 0.1), class = "nu")
+# )
+# brm(bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
+#          Asym ~ (I + D)^2 + P + (1 | id_biomassa),
+#          b2 ~ (I + D)^2 + P,
+#          b3 ~ (I + D)^2 + P,
+#          nl = TRUE,family = student()), 
+#     data = dati_m_gompertz,prior = prior, chains = 0)  # chains = 0 controlla senza campionare
+# 
+# fit_brms <- brm(
+#   bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
+#      Asym ~ (I + D)^2 + P + (1 | id_biomassa),
+#      b2 ~ (I + D)^2 + P,
+#      b3 ~ (I + D)^2 + P,
+#      nl = TRUE,family = student()),
+#   data = dati_m_gompertz,
+#   prior = prior,
+#   chains = 4,
+#   iter = 2000,
+#   cores = 4
+# )
+# 
+# default_prior(
+#   bf(OD ~ Asym * exp(-exp(-(tempo - b2) / b3)),
+#      Asym ~ (I + D)^2 + P + (1 | id_biomassa),
+#      b2 ~ (I + D)^2 + P,
+#      b3 ~ (I + D)^2 + P,
+#      nl = TRUE),
+#   family = student(),
+#   data = dati_m_gompertz
+# )
 
 #### Baranyi - Roberts pipeline
+
+# bootstrap
+coef(modello_gompertz_ml)
+summary(modello_gompertz_ml)
+
+dati_m_gompertz <- na.omit(dati)
+dati_m_gompertz <- dati_m_gompertz |> mutate(
+  I = I - 280,
+  D = D - 18,
+  P = P - 25.5
+)
+Sys.time()
+modello_gompertz_ml <- nlme(
+  model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  fixed = list(
+    Asym ~ (I+D)^2+P, # cambio
+    b2 ~ (I+D)^2+P, # cambio          
+    b3 ~ (I+D)^2+P  # cambio   
+  ),
+  random = Asym ~ 1 | id_biomassa,
+  method = 'ML',
+  start = c(
+    Asym = c(5, rep(0, 4)), 
+    b2 = c(2, rep(0, 4)),     
+    b3 = c(0.8, rep(0, 4)) )
+)
+Sys.time()
+fixef(modello_gompertz_ml)
+start_vals <- c(
+  Asym = fixef(modello_gompertz_ml)[1:5],
+  b2   = fixef(modello_gompertz_ml)[6:10],
+  b3   = fixef(modello_gompertz_ml)[11:15]
+)
+
+library(boot)
+?boot
+
+bm_ids <- unique(dati_m_gompertz$id_biomassa)
+df_idbiomass <- data.frame(id_biomassa = bm_ids) 
+
+
+
+fun.stat <- function(data,i){
+  
+  sampled_biomass <- data[i]
+  
+  dati_boot <- map_dfr(seq_along(sampled_biomass), ~ {
+    dati_m_gompertz %>%
+      filter(id_biomassa == sampled_biomass[.x]) %>%
+      mutate(id_biomassa = paste0("cl_", .x))
+  })
+  
+  mod <- tryCatch(
+    nlme(
+      model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+      data = dati_boot,
+      fixed = list(
+        Asym ~ (I+D)^2+P, # cambio
+        b2 ~ (I+D)^2+P, # cambio          
+        b3 ~ (I+D)^2+P  # cambio   
+      ),
+      random = Asym ~ 1 | id_biomassa,
+      method = 'ML',
+      start = start_vals,
+      control = nlmeControl(
+        maxIter = 500,
+        msMaxIter = 500,
+        tolerance = 1e-3
+      )
+    ),
+    error = function(e) NULL
+  )
+  if (is.null(mod)) return(rep(NA, 15))
+  return(fixef(mod))
+}
+
+Sys.time()
+res.boot <- boot(bm_ids,statistic = fun.stat,R = 100)
+Sys.time()
+cat("Fallimenti:", sum(is.na(res.boot$t[, 1])), "/", 100, "\n")
+res.boot
+
+nomi <- names(fixef(modello_gompertz_ml))
+
+ic_list <- lapply(1:15, function(k) {
+  ci <- boot.ci(res.boot, index = k, type = c("perc", "bca"))
+  data.frame(
+    parametro = nomi[k],
+    lower_perc = ci$percent[4],
+    upper_perc = ci$percent[5],
+    lower_bca  = ci$bca[4],
+    upper_bca  = ci$bca[5]
+  )
+})
+
+ic_df <- do.call(rbind, ic_list)
+print(ic_df)
+
+# bootstrap sui residui
+fitted_vals <- fitted(modello_gompertz_ml, level = 0)  # solo effetti fissi
+residui <- residuals(modello_gompertz_ml, level = 0)   # residui rispetto agli effetti fissi
+
+fun.stat.resid <- function(data, i) {
+  
+  sampled_biomass <- data[i]  # data è bm_ids, un vettore
+  
+  dati_boot <- map_dfr(seq_along(sampled_biomass), ~ {
+    idx <- which(dati_m_gompertz$id_biomassa == sampled_biomass[.x])  # riferimento esplicito
+    sub <- dati_m_gompertz[idx, ]
+    sub$OD <- fitted_vals[idx] + residui[idx]
+    sub$id_biomassa <- paste0("cl_", .x)
+    sub
+  })
+  
+  mod <- tryCatch(
+    nlme(
+      model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+      data = dati_boot,
+      fixed = list(
+        Asym ~ (I+D)^2+P,
+        b2 ~ (I+D)^2+P,           
+        b3 ~ (I+D)^2+P     
+      ),
+      random = Asym ~ 1 | id_biomassa,
+      method = 'ML',
+      start = start_vals,
+      control = nlmeControl(maxIter = 500, msMaxIter = 500, tolerance = 1e-3)
+    ),
+    error = function(e) NULL
+  )
+  
+  if (is.null(mod)) return(rep(NA, 15))
+  return(fixef(mod))
+}
+
+res.boot.resid <- boot(bm_ids, statistic = fun.stat.resid, R = 100)
+
+cat("Fallimenti:", sum(is.na(res.boot.resid$t[, 1])), "/", 100, "\n")
+
+ic_list2 <- lapply(1:15, function(k) {
+  ci <- boot.ci(res.boot.resid, index = k, type = c("perc", "bca"))
+  data.frame(
+    parametro = nomi[k],
+    lower_perc = ci$percent[4],
+    upper_perc = ci$percent[5],
+    lower_bca  = ci$bca[4],
+    upper_bca  = ci$bca[5]
+  )
+})
+
+ic_df2 <- do.call(rbind, ic_list)
+print(ic_df2)
