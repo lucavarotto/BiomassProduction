@@ -1,4 +1,5 @@
 library(ggplot2)
+library(patchwork)
 
 load("Analisi/dati_modificati.Rdata")
 
@@ -9,11 +10,12 @@ load("Analisi/dati_modificati.Rdata")
 # png(file = "Grafici/tutte_curve.png", width=1200, height=1200)
 ggplot(dati, aes(x = tempo, y = OD)) +
   geom_line(aes(group = id_biomassa), na.rm = TRUE) +
+  geom_point(aes(group = id_biomassa), na.rm = T, alpha = 1, size = 1)+
   scale_color_viridis_d(option = "plasma", end = 0.9) +
   labs(
     title = "",
     subtitle = "",
-    x = "Tempo (giorni)",
+    x = "Tempo (settimane)",
     y = "Resa di Biomassa (OD)",
   ) +
   theme_minimal() +
@@ -23,108 +25,125 @@ ggplot(dati, aes(x = tempo, y = OD)) +
   )
 # dev.off()
 
-## Curve medie
-ggplot(dati, aes(x = tempo, y = OD, color = as.factor(condizione_sperimentale))) +
-  # 1. Curve individuali sullo sfondo: forziamo il group su id_biomassa e il colore grigio
-  geom_line(aes(group = id_biomassa), color = "gray85", alpha = 0.5, na.rm = TRUE) +
-  geom_point(aes(group = id_biomassa), color = "gray85", alpha = 0.3, size = 1, na.rm = TRUE) +
-  
-  # 2. Linee delle MEDIE per ogni condizione sperimentale (spesse e colorate)
-  stat_summary(fun = mean, geom = "line", linewidth = 1.2, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "point", size = 2.5, na.rm = TRUE) +
-  
-  # Estetica del grafico
+
+## Per condizione sperimentale
+p1 <- ggplot(dati, aes(x = tempo, y = OD, color = as.factor(condizione_sperimentale), group = id_biomassa)) +
+  geom_line(alpha = 0.7, na.rm = TRUE) +
+  geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
   labs(
-    title = "Evoluzione della Densità Ottica: Profili Medi per Condizione",
-    subtitle = "Le linee grigie sullo sfondo rappresentano le singole repliche biologiche",
-    x = "Tempo (giorni)",
+    title = "",
+    x = "Tempo (settimane)",
     y = "Optical Density (OD)",
     color = "Condizione Sperimentale"
   ) + 
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = "right",
-    plot.title = element_text(face = "bold")
-  )
+  theme_minimal() +
+  theme(legend.position = "none")
+  
 
-## Per condizione sperimentale
-ggplot(dati, aes(x = tempo, y = OD, color = as.factor(condizione_sperimentale), group = id_biomassa)) +
-  geom_line(alpha = 0.7, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
+## Curve medie
+p2 <- ggplot(dati, aes(x = tempo, y = OD, color = as.factor(condizione_sperimentale))) +
+  # 1. Curve individuali sullo sfondo: forziamo il group su id_biomassa e il colore grigio
+  geom_line(aes(group = id_biomassa), color = "gray85", alpha = 0.7 , na.rm = TRUE) +
+  geom_point(aes(group = id_biomassa), color = "gray85", alpha = 0.5, size = 1, na.rm = TRUE) +
+  
+  # 2. Linee delle MEDIE per ogni condizione sperimentale (spesse e colorate)
+  stat_summary(fun = mean, geom = "line", linewidth = 0.7, na.rm = TRUE) +
+  stat_summary(fun = mean, geom = "point", size = 1, na.rm = TRUE) +
+  
+  # Estetica del grafico
   labs(
-    title = "",
-    x = "Tempo (giorni)",
+    # title = "Evoluzione della Densità Ottica: Profili Medi per Condizione",
+    # subtitle = "Le linee grigie sullo sfondo rappresentano le singole repliche biologiche",
+    x = "Tempo (settimane)",
     y = "Optical Density (OD)",
     color = "Condizione Sperimentale"
-  ) + theme_minimal()
-    
+  ) + 
+  theme_minimal() +
+  theme(legend.position = "right")
+  
+# png("Grafici/Curve_medie_condizione.png")
+p1 + p2
+# dev.off()
 
-## Condizionate a I
-ggplot(dati, aes(x = tempo, y = OD, color = as.factor(I), group = id_biomassa)) +
-  geom_line(alpha = 0.7, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
-  labs(
-    title = "",
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattore I"
-  ) + theme_minimal()
+## Condizionate 
+dati$condizione_sperimentale2 <- paste(dati$I, dati$D, sep = "_")
+dati$condizione_sperimentale3 <- paste(dati$I, dati$P, sep = "_")
+dati$condizione_sperimentale4 <- paste(dati$D, dati$P, sep = "_")
 
+grafico_condizionate <- function(condizionante, f1, f2 = NULL) {
+  # Se f2 è fornito, crea una nuova colonna 'gruppo_colore' unendo i valori di f1 e f2
+  if (!is.null(f2)) {
+    dati$gruppo_colore <- paste(dati[[f1]], dati[[f2]], sep = "_")
+    label_colore <- paste(f1, f2, sep = "_") # Etichetta per la legenda
+  } else {
+    # Se f2 manca, usa solo f1 trasformandolo in fattore per la scala cromatica
+    dati$gruppo_colore <- as.factor(dati[[f1]])
+    label_colore <- f1 # Etichetta per la legenda
+  }
+  
+  ggplot(dati, aes(x = tempo, y = OD, color = gruppo_colore)) +
+    # Rappresenta le singole repliche come linee sottili e semitrasparenti (alpha = 0.2)
+    # 'group = id_biomassa' assicura che ogni serie temporale sia una linea distinta
+    geom_line(aes(group = id_biomassa), alpha = 0.2, na.rm = TRUE) +
+    # Calcola e disegna la linea della media per ogni gruppo (spessa 1.5)
+    stat_summary(fun = mean, geom = "line", linewidth = 1.5, na.rm = TRUE) +
+    # Aggiunge i punti che rappresentano la media per ogni rilevazione temporale
+    stat_summary(fun = mean, geom = "point", size = 2, na.rm = TRUE) +
+    # Divide il grafico in sotto-pannelli in base alla variabile 'condizionante'
+    facet_wrap(vars(dati[[condizionante]])) +
+    scale_color_viridis_d(option = "magma", end = 0.9) +
+    labs(
+      title = paste("Dinamica di crescita condizionata a", condizionante),
+      x = "Tempo (settimane)", y = "Optical Density (OD)", color = label_colore
+    ) + theme_minimal()
+}
 
-## Condizionatw rispetto a D
-ggplot(dati, aes(x = tempo, y = OD, color = as.factor(D), group = id_biomassa)) +
-  geom_line(alpha = 0.7, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
-  labs(
-    title = "",
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattore D"
-  ) + theme_minimal()
-
-## Condizionate rispetto a P
-ggplot(dati, aes(x = tempo, y = OD, color = as.factor(P), group = id_biomassa)) +
-  geom_line(alpha = 0.7, na.rm = TRUE) +
-  geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
-  labs(
-    title = "",
-    x = "Tempo (giorni)",
-    y = "Optical Density (OD)",
-    color = "Fattore P"
-  ) + theme_minimal()
+# png("Grafici/condizionata_D_I.png")
+grafico_condizionate("I", "D")
+# dev.off()
+# png("Grafici/condizionata_D_P.png")
+grafico_condizionate("P", "D")
+# dev.off()
+# png("Grafici/condizionata_P_I.png")
+grafico_condizionate("I", "P")
+# dev.off()
 
 ## Marginale I
-ggplot(dati, aes(x = tempo, y = OD, color = as.factor(I), group = id_biomassa)) +
+marginale_I <- ggplot(dati, aes(x = tempo, y = OD, color = as.factor(I), group = id_biomassa)) +
   geom_line(alpha = 0.7, na.rm = TRUE) +
   geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
   labs(
     title = "",
-    x = "Tempo (giorni)",
+    x = "Tempo (settimane)",
     y = "Optical Density (OD)",
     color = "Fattore I"
   ) + theme_minimal()
 
 ## Marginale per D
-ggplot(dati, aes(x = tempo, y = OD, color = as.factor(D), group = id_biomassa)) +
+marginale_D <- ggplot(dati, aes(x = tempo, y = OD, color = as.factor(D), group = id_biomassa)) +
   geom_line(alpha = 0.7, na.rm = TRUE) +
   geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
   labs(
     title = "",
-    x = "Tempo (giorni)",
+    x = "Tempo (settimane)",
     y = "Optical Density (OD)",
     color = "Fattore D"
   ) + theme_minimal()
 
 ## Marginale per P
-ggplot(dati, aes(x = tempo, y = OD, color = as.factor(P), group = id_biomassa)) +
+marginale_P <- ggplot(dati, aes(x = tempo, y = OD, color = as.factor(P), group = id_biomassa)) +
   geom_line(alpha = 0.7, na.rm = TRUE) +
   geom_point(alpha = 0.5, na.rm = TRUE) + # Opzionale: aggiunge i punti per chiarezza
   labs(
     title = "",
-    x = "Tempo (giorni)",
+    x = "Tempo (settimane)",
     y = "Optical Density (OD)",
     color = "Fattore P"
   ) + theme_minimal()
+
+# png("Grafici/marginali.png")
+marginale_I + marginale_D + marginale_P
+# dev.off()
 
 
 ## Dati mancanti
@@ -167,49 +186,39 @@ ggplot(subset(dati, I==90 & D==24 & (P == 1 | P==25.5) ), aes(x = tempo, y = OD,
 # Grafico incrementi ------------------------------------------------------
 
 # Differenze per consumo
-ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = consumo)) +
+diff <- ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = consumo)) +
   geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "red", size = 1) +
   scale_color_viridis_d(option = "plasma") +
   labs(
-    title = "Velocità di crescita: Incrementi giornalieri di OD",
-    subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
-    x = "Giorno (t)",
-    y = "Delta OD (OD[t] - OD[t-1])",
-    color = "Consumo (I*D)"
+    title = "",
+    subtitle = "",
+    x = "Tempo (settimane)",
+    y = bquote(Delta ~ "OD"),
+    color = bquote("Consumo (I" %*% "D)")
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "none")
 
-# Differenze per combinazione di condizioni sperimentali
-ggplot(dati_incrementi, aes(x = tempo, y = incremento_OD, color = condizione_sperimentale)) +
-  geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
-  stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "red", size = 1) +
-  scale_color_viridis_d(option = "plasma") +
-  labs(
-    title = "Velocità di crescita: Incrementi giornalieri di OD",
-    subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
-    x = "Settimana (t)",
-    y = "Delta OD (OD[t] - OD[t-1])",
-    color = "Condizioni Sperimentali"
-  ) +
-  theme_minimal()
-
-# Rapporti per comb. condiz. sperimentali
-ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = condizione_sperimentale)) +
+# Rapporti per consumo
+rapp <- ggplot(dati_incrementi_rapporti, aes(x = tempo, y = incremento_OD, color = consumo)) +
   geom_line(aes(group = id_biomassa), alpha = 0.15, na.rm = TRUE) +
   stat_summary(fun = mean, geom = "line", size = 1.2, na.rm = TRUE) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 1) +
   scale_color_viridis_d(option = "plasma") +
   labs(
-    title = "Velocità di crescita: Incrementi giornalieri di OD",
-    subtitle = "L'incremento indica quanto la biomassa aumenta tra un giorno e il successivo",
-    x = "Settimana (t)",
-    y = "Delta OD (OD[t] - OD[t-1])",
-    color = "Condizioni Sperimentali"
+    title = "",
+    subtitle = "",
+    x = "Tempo (settimane)",
+    y = bquote(frac(OD[t], OD[t-1])),
+    color = bquote("Consumo (I" %*% "D)")
   ) +
   theme_minimal()
+
+# png("Grafici/incrementi.png")
+diff + rapp
+# dev.off()
 
 
 # Grafico tridimensionale con predict della gompertz
