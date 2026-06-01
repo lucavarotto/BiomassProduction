@@ -18,13 +18,13 @@ ggplot(conteggi, aes(x = as.factor(I), y = as.factor(D))) +
   facet_wrap(~ P, labeller = label_both) +
   scale_fill_viridis_c(option = "magma", end=0.8) +
   labs(
-    title = "Verifica Bilanciamento del Disegno Sperimentale",
-    subtitle = "Conteggio del numero di biomasse per combinazione di I, D e P",
     x = "Intensità Luminosa (I)",
     y = "Durata Esposizione (D)",
     fill = "N. Repliche"
   ) +
   theme_minimal()
+ggsave("Grafici/disegno_sperimentale.pdf")
+print("Immagine salvata")
 
 # Modelli biologici ----
 
@@ -131,6 +131,47 @@ eval_gomp <- function(m, t, re=0){
 
 eval_gomp(f %*% t(X_m), 5, re[1])
 
+## Regressione gompertz no interazione ----
+
+gompertz_no_int <- nlme(
+  model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  fixed = list(
+    Asym ~ (I+D)+P,
+    b2 ~ (I+D)+P,           
+    b3 ~ (I+D)+P     
+  ),
+  random = Asym ~ 1 | id_biomassa,
+  start = c(
+    Asym = c(14, rep(0, 3)), 
+    b2 = c(5.5, rep(0, 3)),     
+    b3 = c(0.75, rep(0, 3)))
+)
+
+gompertz_no_int_AR <- nlme(
+  model = OD ~ SSgompertz(tempo, Asym, b2, b3),
+  data = dati_m_gompertz,
+  fixed = list(
+    Asym ~ (I+D)+P,
+    b2 ~ (I+D)+P,           
+    b3 ~ (I+D)+P     
+  ),
+  correlation = corAR1(form = ~ tempo | id_biomassa),
+  random = Asym ~ 1 | id_biomassa,
+  start = c(
+    Asym = c(14, rep(0, 3)), 
+    b2 = c(5.5, rep(0, 3)),     
+    b3 = c(0.75, rep(0, 3)))
+)
+
+anova(gompertz_no_int, gompertz_no_int_AR)
+
+2*(-gompertz_no_int$logLik + gompertz_no_int_AR$logLik)
+
+1-pchisq(2*(-gompertz_no_int$logLik + gompertz_no_int_AR$logLik), df = 1)
+
+AIC(modello_gompertz, gompertz_no_int, gompertz_no_int_AR)
+BIC(modello_gompertz, gompertz_no_int, gompertz_no_int_AR)
 
 # Regressione gompertz solo fisso ----
 
@@ -286,3 +327,254 @@ ggplot(dati_lme, aes(x = tempo, color = as.factor(condizione_sperimentale))) +
   ) + 
   theme_minimal() +
   theme(strip.text = element_text(face = "bold"))
+
+
+
+
+# modello normale ----
+
+# Modello gerarchico non lineare
+# Y_i ~ N_{n_i}(mu_i(theta), V_i), i = 1,...,53
+# mu_ij = Asym_i * exp(-b2_i * b3_i^tempo)
+# Asym_i = eta_i(I,D,P) + u_i,  u_i ~ N(0,1)
+# b2_i   = eta_i(I,D,P)
+# b3_i   = eta_i(I,D,P)
+# eta_i  = beta0 + beta1*I_i + beta2*D_i + beta3*P_i + beta4*I_i*D_i
+
+dati <- na.omit(dati)
+dati$n_i <- 7
+dati$n_i[dati$id_biomassa == 12 | dati$id_biomassa == 15] <- 6
+if (min(dati$tempo) == 0){ dati$tempo <- dati$tempo + 1}
+
+library(nlme)
+
+mean_fun <- function(tempo, Asym, b2, b3) {
+  Asym * exp(-b2 * b3^tempo)
+}
+
+eta <- function(beta, I, D, P) {
+  beta[1] + beta[2]*I + beta[3]*D + beta[4]*P + beta[5]*I*D
+}
+
+# Log-verosimiglianza marginale
+# (effetti fissi + effetto casuale su Asym)
+# u_i ~ N(0,1) => integrazione numerica su u_i
+log_lik <- function(par, data) {
+  beta_Asym <- par[1:5]   # coefficienti per Asym
+  beta_b2   <- par[6:10]  # coefficienti per b2
+  beta_b3   <- par[11:15] # coefficienti per b3
+  log_sigma <- par[16]    # log(sigma) residuo (per gruppo)
+  sigma     <- exp(log_sigma)
+  
+  groups <- unique(data$id_biomassa)
+  ll <- 0
+  
+  for (i in groups) {
+    
+    sub  <- data[data$id_biomassa == i, ]
+    
+    I_i  <- sub$I[1]; D_i <- sub$D[1]; P_i <- sub$P[1]
+    
+    eta_Asym <- eta(beta_Asym, I_i, D_i, P_i)
+    b2_i     <- eta(beta_b2,   I_i, D_i, P_i)
+    b3_i     <- eta(beta_b3,   I_i, D_i, P_i)
+    
+    # Integrazione su u_i ~ N(0,1) con quadratura di Gauss-Hermite
+    gh        <- statmod::gauss.quad.prob(20, dist = "normal")
+    nodes     <- gh$nodes          # quantili di N(0,1)
+    weights   <- gh$weights
+    
+    ll_i <- 0
+    for (k in seq_along(nodes)) {
+      Asym_ik <- eta_Asym + nodes[k]   # Asym_i = eta + u_i
+      
+      mu_ik <- mean_fun(sub$tempo, Asym_ik, b2_i, b3_i)
+      resid <- sub$OD - mu_ik
+      # densità normale del vettore Y_i | u_i (V_i = sigma^2 * I)
+      log_f <- sum(dnorm(resid, mean = 0, sd = sigma, log = TRUE))
+      ll_i  <- ll_i + weights[k] * exp(log_f)
+    }
+    ll <- ll + log(ll_i + .Machine$double.eps)
+  }
+  return(-ll)   # restituisce la neg-log-lik per optim()
+}
+
+# 5.  Stima con optim()
+par_init <- rep(0, 16)
+par_init[16] <- log(1)   # sigma iniziale = 1
+
+fit <- optim(
+  par     = par_init,
+  fn      = log_lik,
+  data    = dati,
+  method  = "BFGS",
+  control = list(maxit = 2000, trace = 1),
+  hessian = TRUE
+)
+
+parametri <- matrix(fit$par[1:15], nrow=3, byrow=T)
+dim(parametri)
+
+X_m <- model.matrix(~I*D+P, data=dati)
+X_m <- X_m[!duplicated(X_m),]
+
+apply(X_m, 1, function(x) c(x %*% t(parametri))) |> View()
+
+# errori standard da hessiano
+se <- sqrt(diag(solve(fit$hessian)))
+
+cat("Stime:", fit$par, "\n")
+cat("SE:   ", se,      "\n")
+
+# 6.  Alternativa con nlme (se V_i = sigma^2 * I e random solo su Asym)
+fit_nlme <- nlme(
+  model  = OD ~ Asym * exp(-b2 * b3^tempo),
+  data   = df,
+  fixed  = Asym + b2 + b3 ~ I + D + P + I:D,
+  random = Asym ~ 1 | id_biomassa,     # u_i ~ N(0, psi^2) stimato
+  start  = c(
+    Asym = c(0,0,0,0,0),
+    b2   = c(0,0,0,0,0),
+    b3   = c(0,0,0,0,0)
+  )
+)
+summary(fit_nlme)
+
+
+
+
+
+
+
+# modello normale senza RE ----
+
+# Modello non lineare con errori AR(1) — senza effetti casuali
+# Y_i ~ N_{n_i}(mu_i(theta), V_i),   V_i = sigma^2 * R_i(rho)
+# mu_ij = Asym_i * exp(-b2_i * b3_i^tempo)
+# Asym_i = eta_i(I,D,P)
+# b2_i   = eta_i(I,D,P)
+# b3_i   = eta_i(I,D,P)
+# eta_i  = beta0 + beta1*I_i + beta2*D_i + beta3*P_i
+
+library(statmod)
+
+dati <- na.omit(dati)
+dati$n_i <- 7
+dati$n_i[dati$id_biomassa == 12 | dati$id_biomassa == 15] <- 6
+if (min(dati$tempo) == 0){ dati$tempo <- dati$tempo + 1}
+
+# Funzioni di supporto
+
+mean_fun <- function(tempo, Asym, b2, b3) {
+  Asym * exp(-b2 * b3^tempo)
+}
+
+eta <- function(beta, I, D, P) {
+  beta[1] + beta[2]*I + beta[3]*D + beta[4]*P
+}
+
+# Matrice di correlazione AR(1) di dimensione n
+ar1_cor <- function(n, rho) {
+  exp_mat <- abs(outer(1:n, 1:n, "-"))
+  rho^exp_mat
+}
+
+# Log-verosimiglianza
+log_lik <- function(par, data) {
+  
+  beta_Asym <- par[1:4]
+  beta_b2   <- par[5:8]
+  beta_b3   <- par[9:12]
+  sigma     <- exp(par[13])          # sigma > 0
+  rho       <- tanh(par[14])         # rho in (-1, 1)
+  
+  groups <- unique(data$id_biomassa)
+  ll     <- 0
+  
+  for (i in groups) {
+    
+    sub <- data[data$id_biomassa == i, ]
+    n_i <- nrow(sub)
+    
+    I_i <- sub$I[1];  D_i <- sub$D[1];  P_i <- sub$P[1]
+    
+    Asym_i <- eta(beta_Asym, I_i, D_i, P_i)   # nessun u_i
+    b2_i   <- eta(beta_b2,   I_i, D_i, P_i)
+    b3_i   <- eta(beta_b3,   I_i, D_i, P_i)
+    
+    mu_i  <- mean_fun(sub$tempo, Asym_i, b2_i, b3_i)
+    resid <- sub$OD - mu_i
+    
+    # V_i = sigma^2 * R_i(rho)
+    R_i   <- ar1_cor(n_i, rho)
+    V_i   <- sigma^2 * R_i
+    
+    # log-densità N_{n_i}(0, V_i) valutata nei residui
+    ll_i  <- mvtnorm::dmvnorm(resid, mean = rep(0, n_i), sigma = V_i, log = TRUE)
+    ll    <- ll + ll_i
+  }
+  
+  return(-ll)
+}
+
+# Stima con optim()
+
+par_init        <- rep(0, 14)
+par_init[13]    <- log(0.5)     # sigma = 1
+par_init[14]    <- atanh(0.3) # rho   = 0.3
+
+fit <- optim(
+  par     = par_init,
+  fn      = log_lik,
+  data    = dati,
+  method  = "BFGS",
+  control = list(maxit = 2000, trace = 1),
+  hessian = TRUE
+)
+
+parametri <- matrix(fit$par[1:12], nrow=3, byrow=T)
+dim(parametri)
+
+X_m <- model.matrix(~I+D+P, data=dati)
+X_m <- X_m[!duplicated(X_m),]
+
+apply(X_m, 1, function(x) c(x %*% t(parametri))) |> View()
+
+# Errori standard da hessiano (scala originale via delta method se serve)
+se <- sqrt(diag(solve(fit$hessian)))
+
+# Recupera parametri in scala leggibile
+stime        <- fit$par
+stime[13]    <- exp(fit$par[13])          # sigma
+stime[14]    <- tanh(fit$par[14])         # rho
+
+nomi <- c(
+  paste0("Asym_beta", 0:3),
+  paste0("b2_beta",   0:3),
+  paste0("b3_beta",   0:3),
+  "sigma", "rho"
+)
+
+result <- data.frame(
+  parametro = nomi,
+  stima     = round(stime, 4),
+  se_raw    = round(se, 4)
+)
+print(result)
+
+
+
+
+fit_nlme <- nlme(
+  model       = OD ~ Asym * exp(-b2 * b3^tempo),
+  data        = dati,
+  fixed       = Asym + b2 + b3 ~ I + D + P,
+  correlation = corAR1(form = ~ tempo | id_biomassa),
+  random    = list(id_biomassa = pdDiag(Asym ~ 0)),
+  method      = "ML", # <--- essenziale per LRT e AIC confrontabili
+  start       = c(
+    Asym = c(0,0,0,0),
+    b2   = c(0,0,0,0),
+    b3   = c(0,0,0,0)
+  )
+)
